@@ -1,0 +1,165 @@
+{
+  "version": "1.0",
+  "assets": {
+    "ss_ss_ss2": {
+      "url": "https://api.makko.ai/storage/v1/object/public/image-assets/0f84fe06-5c42-40c3-b563-1a28d18f37cc/background/1773005704685_background.png?t=1773038721708",
+      "name": "SS:SS:SS2",
+      "asset_type": "background",
+      "metadata": {
+        "width": 1920,
+        "height": 1080,
+        "format": "png"
+      }
+    },
+    "cryo-sleep": {
+      "url": "https://api.makko.ai/storage/v1/object/public/image-assets/0f84fe06-5c42-40c3-b563-1a28d18f37cc/background/1773038221017_background.png?t=1773038714903",
+      "name": "Cryo-Sleep",
+      "asset_type": "background",
+      "metadata": {
+        "width": 2520,
+        "height": 1080,
+        "format": "png"
+      }
+    },
+    "mode_select": {
+      "url": "https://api.makko.ai/storage/v1/object/public/image-assets/0f84fe06-5c42-40c3-b563-1a28d18f37cc/background/1773038652022_background.png?t=1773038715747",
+      "name": "Mode Select",
+      "asset_type": "background",
+      "metadata": {
+        "width": 1620,
+        "height": 1080,
+        "format": "png"
+      }
+    },
+    "ss_ss_ss": {
+      "url": "https://api.makko.ai/storage/v1/object/public/image-assets/0f84fe06-5c42-40c3-b563-1a28d18f37cc/background/1773005527041_background.png?t=1773038721106",
+      "name": "SS:SS:SS",
+      "asset_type": "background",
+      "metadata": {
+        "width": 1920,
+        "height": 1080,
+        "format": "png"
+      }
+    },
+    "ss_ss_ss3": {
+      "url": "https://api.makko.ai/storage/v1/object/public/image-assets/0f84fe06-5c42-40c3-b563-1a28d18f37cc/background/1773006481713_background.png?t=1773038722260",
+      "name": "SS:SS:SS3",
+      "asset_type": "background",
+      "metadata": {
+        "width": 2520,
+        "height": 1080,
+        "format": "png"
+      }
+    },
+    "sector_scavs_splash_screen": {
+      "url": "https://api.makko.ai/storage/v1/object/public/image-assets/0f84fe06-5c42-40c3-b563-1a28d18f37cc/background/1773005437219_background.png?t=1773038723812",
+      "name": "Sector Scavs Splash Screen",
+      "asset_type": "background",
+      "metadata": {
+        "width": 1920,
+        "height": 1080,
+        "format": "png"
+      }
+    },
+    "return_to_base": {
+      "url": "https://api.makko.ai/storage/v1/object/public/image-assets/0f84fe06-5c42-40c3-b563-1a28d18f37cc/prop/1773040736867_prop.png?t=1773045229437",
+      "name": "Return to Base",
+      "asset_type": "prop",
+      "metadata": {
+        "width": 469,
+        "height": 509,
+        "format": "png"
+      }
+    },
+    "event_feed": {
+      "url": "https://api.makko.ai/storage/v1/object/public/image-assets/0f84fe06-5c42-40c3-b563-1a28d18f37cc/prop/1773040410551_prop.png?t=1773041082161",
+      "name": "Event Feed",
+      "asset_type": "prop",
+      "metadata": {
+        "width": 339,
+        "height": 505,
+        "format": "png"
+      }
+    },
+    "run_timer": {
+      "url": "https://api.makko.ai/storage/v1/object/public/image-assets/0f84fe06-5c42-40c3-b563-1a28d18f37cc/prop/1773040313288_prop.png?t=1773041082923",
+      "name": "Run Timer",
+      "asset_type": "prop",
+      "metadata": {
+        "width": 909,
+        "height": 281,
+        "format": "png"
+      }
+    },
+    "ssssboards2": {
+      "url": "https://api.makko.ai/storage/v1/object/public/image-assets/0f84fe06-5c42-40c3-b563-1a28d18f37cc/background/1773041501090_background.png?t=1773045228452",
+      "name": "SSSSBoards2",
+      "asset_type": "background",
+      "metadata": {
+        "width": 1350,
+        "height": 1080,
+        "format": "png"
+      }
+    },
+    "ssssboards": {
+      "url": "https://api.makko.ai/storage/v1/object/public/image-assets/0f84fe06-5c42-40c3-b563-1a28d18f37cc/background/1773041259962_background.png?t=1773045228895",
+      "name": "SSSSBoards",
+      "asset_type": "background",
+      "metadata": {
+        "width": 1350,
+        "height": 1080,
+        "format": "png"
+      }
+    },
+    "derelict_graveyard": {
+      "url": "https://api.makko.ai/storage/v1/object/public/image-assets/0f84fe06-5c42-40c3-b563-1a28d18f37cc/background/1773042822650_background.png?t=1773045226885",
+      "name": "Derelict Graveyard",
+      "asset_type": "background",
+      "metadata": {
+        "width": 1620,
+        "height": 1080,
+        "format": "png"
+      }
+    },
+    "sssscryochamber": {
+      "url": "https://api.makko.ai/storage/v1/object/public/image-assets/0f84fe06-5c42-40c3-b563-1a28d18f37cc/background/1773042488004_background.png?t=1773045227463",
+      "name": "SSSSCryoChamber",
+      "asset_type": "background",
+      "metadata": {
+        "width": 1620,
+        "height": 1080,
+        "format": "png"
+      }
+    },
+    "spacefield": {
+      "url": "https://api.makko.ai/storage/v1/object/public/image-assets/0f84fe06-5c42-40c3-b563-1a28d18f37cc/background/1773043367322_background.png?t=1773045226281",
+      "name": "Spacefield",
+      "asset_type": "background",
+      "metadata": {
+        "width": 1620,
+        "height": 1080,
+        "format": "png"
+      }
+    },
+    "cryochambernews": {
+      "url": "https://api.makko.ai/storage/v1/object/public/image-assets/0f84fe06-5c42-40c3-b563-1a28d18f37cc/background/1773046684982_background.png?t=1773047681514",
+      "name": "CryoChamberNews",
+      "asset_type": "background",
+      "metadata": {
+        "width": 1350,
+        "height": 1080,
+        "format": "png"
+      }
+    },
+    "cryochambernew": {
+      "url": "https://api.makko.ai/storage/v1/object/public/image-assets/0f84fe06-5c42-40c3-b563-1a28d18f37cc/background/1773046510065_background.png?t=1773047682159",
+      "name": "CryoChamberNew",
+      "asset_type": "background",
+      "metadata": {
+        "width": 1920,
+        "height": 1080,
+        "format": "png"
+      }
+    }
+  }
+}
