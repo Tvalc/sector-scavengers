@@ -67,6 +67,9 @@ export class IdleScene implements Scene {
   // Board static asset
   private boardAsset: StaticAsset | null = null;
 
+  // Spacefield background asset
+  private spacefieldAsset: StaticAsset | null = null;
+
   constructor(game: Game) {
     this.game = game;
     this.idleSystem = new IdleSystem(game);
@@ -88,11 +91,14 @@ export class IdleScene implements Scene {
   }
 
   /**
-   * Load the board static asset
+   * Load the board and spacefield static assets
    */
   private loadBoardAsset(): void {
     if (MakkoEngine.hasStaticAsset(BOARD_ASSET_NAME)) {
       this.boardAsset = MakkoEngine.staticAsset(BOARD_ASSET_NAME);
+    }
+    if (MakkoEngine.hasStaticAsset('spacefield')) {
+      this.spacefieldAsset = MakkoEngine.staticAsset('spacefield');
     }
   }
 
@@ -131,7 +137,7 @@ export class IdleScene implements Scene {
           cell.definition.centerX,
           cell.definition.centerY,
           cell.rarity,
-          1.0
+          0.28
         );
         this.spaceshipVisuals.set(cell.definition.id, visual);
       }
@@ -240,7 +246,10 @@ export class IdleScene implements Scene {
     // Clear background
     display.clear(COLORS.background);
 
-    // Render board background
+    // Render spacefield background (full canvas)
+    this.renderSpacefield(display);
+
+    // Render board background on top of starfield
     this.renderBoard(display);
 
     // Render spaceships with selection
@@ -259,6 +268,21 @@ export class IdleScene implements Scene {
     // Render How to Play modal on top
     if (this.showHowToPlay) {
       this.renderHowToPlayModal(display);
+    }
+  }
+
+  /**
+   * Render the spacefield background scaled to fill canvas
+   */
+  private renderSpacefield(display: IDisplay): void {
+    if (this.spacefieldAsset) {
+      display.drawImage(
+        this.spacefieldAsset.image,
+        0,
+        0,
+        display.width,
+        display.height
+      );
     }
   }
 
