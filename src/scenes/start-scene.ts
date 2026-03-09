@@ -181,20 +181,28 @@ export class StartScene implements Scene {
   }
 
   /**
-   * Render background image
+   * Render background image - scaled to cover entire canvas
    */
   private renderBackground(display: typeof MakkoEngine.display): void {
-    // Try to load and render the background
     const bg = MakkoEngine.staticAsset('ss_ss_ss2');
     
     if (bg) {
-      // Draw the background image scaled to fit the screen
-      display.drawImage(bg.image, 0, 0, display.width, display.height);
+      // Scale to cover canvas (may crop edges if aspect ratio differs)
+      const canvasWidth = display.width;
+      const canvasHeight = display.height;
+      const scaleX = canvasWidth / bg.width;
+      const scaleY = canvasHeight / bg.height;
+      const scale = Math.max(scaleX, scaleY); // Cover mode
+      
+      const scaledWidth = bg.width * scale;
+      const scaledHeight = bg.height * scale;
+      const drawX = (canvasWidth - scaledWidth) / 2;
+      const drawY = (canvasHeight - scaledHeight) / 2;
+      
+      display.drawImage(bg.image, drawX, drawY, scaledWidth, scaledHeight);
     } else {
       // Fallback: dark space background with subtle gradient effect
       display.clear(COLORS.background);
-      
-      // Draw some decorative elements as fallback
       this.renderFallbackBackground(display);
     }
   }

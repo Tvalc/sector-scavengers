@@ -48,6 +48,7 @@ interface SectorScavengersSave {
   totalCollapses: number;
   tutorialSeen: boolean;
   tutorialSkipped: boolean;
+  hubSelectedNodes: number[];
 }
 
 /**
@@ -61,6 +62,9 @@ export class Game {
   private stateMachine = new StateMachine<Game>();
   private lastTime = 0;
   private running = false;
+  
+  /** Fullscreen toggle callback */
+  public fullscreenToggleCallback: (() => void) | null = null;
   
   /** Persistent game state */
   public state: GameState;
@@ -130,7 +134,7 @@ export class Game {
     const { IdleScene } = await import('../scenes/idle-scene');
     const { DepthDiveScene } = await import('../scenes/depth-dive-scene');
     const { ResultsScene } = await import('../scenes/results-scene');
-    const { TutorialScene } = await import('../scenes/tutorial-scene');
+    const { TutorialScene } = await import('../scenes/tutorial');
     const { CryoChamberScene } = await import('../scenes/cryo-chamber-scene');
 
     await this.scenes.register(new StartScene(this));
@@ -193,6 +197,11 @@ export class Game {
 
     display.endFrame();
 
+    // Check for fullscreen toggle (Shift+F)
+    if (this.fullscreenToggleCallback) {
+      this.fullscreenToggleCallback();
+    }
+
     // CRITICAL: Must call at end of each frame
     MakkoEngine.input.endFrame();
   }
@@ -220,6 +229,8 @@ export class Game {
       console.warn('[Game] No active Depth Dive session');
       return;
     }
+    // Clear hub selection after dive ends
+    this.clearHubSelectedNodes();
     this.stateMachine.transition(GameFlowStates.RESULTS, this);
   }
 
@@ -351,6 +362,31 @@ export class Game {
   }
 
   // ============================================================================
+  // Hub Selection Management
+  // ============================================================================
+
+  /**
+   * Set selected hub nodes for the next dive
+   */
+  setHubSelectedNodes(ids: number[]): void {
+    this.state.hubSelectedNodes = [...ids];
+  }
+
+  /**
+   * Get currently selected hub nodes
+   */
+  getHubSelectedNodes(): number[] {
+    return [...this.state.hubSelectedNodes];
+  }
+
+  /**
+   * Clear hub selection (called after dive ends)
+   */
+  clearHubSelectedNodes(): void {
+    this.state.hubSelectedNodes = [];
+  }
+
+  // ============================================================================
   // Persistence
   // ============================================================================
 
@@ -368,7 +404,8 @@ export class Game {
       totalExtractions: this.state.totalExtractions,
       totalCollapses: this.state.totalCollapses,
       tutorialSeen: this.state.tutorialSeen,
-      tutorialSkipped: this.state.tutorialSkipped ?? false
+      tutorialSkipped: this.state.tutorialSkipped ?? false,
+      hubSelectedNodes: this.state.hubSelectedNodes
     });
   }
 
@@ -389,6 +426,7 @@ export class Game {
       this.state.totalCollapses = saveData.totalCollapses;
       this.state.tutorialSeen = saveData.tutorialSeen ?? false;
       this.state.tutorialSkipped = saveData.tutorialSkipped ?? false;
+      this.state.hubSelectedNodes = saveData.hubSelectedNodes ?? [];
       
       // Check viral multiplier expiry on load
       this.updateViralMultiplier();

@@ -15,6 +15,9 @@ import { JuiceSystem } from '../systems/juice-system';
 import { TacticCard, CardType } from '../types/cards';
 import { MAX_ROUNDS, MAX_SHIELDS } from '../types/state';
 import { COLORS, CARD_COLORS, FONTS, LAYOUT } from '../ui/theme';
+import { BatteryCoreDisplay, NodeVisual, NodeVisualOptions } from '../ui/visual-components';
+import { DangerMeter } from '../ui/visual-components';
+import { COLLAPSE_PROBABILITY } from '../types/state';
 
 /**
  * DepthDiveScene - active 10-round session
@@ -42,12 +45,20 @@ export class DepthDiveScene implements Scene {
   private cardHeight = 240;
   private cardSpacing = 180;
 
+  // Visual components
+  private batteryDisplay: BatteryCoreDisplay;
+  private dangerMeter: DangerMeter;
+
   constructor(game: Game) {
     this.game = game;
     this.juice = new JuiceSystem();
     this.depthDiveSystem = new DepthDiveSystem(game, this.juice);
     this.cardSystem = new TacticCardSystem(game, this.juice);
     this.discoverySystem = new DiscoveryEventSystem(game);
+
+    // Initialize visual components
+    this.batteryDisplay = new BatteryCoreDisplay(50, 30, 200, 24);
+    this.dangerMeter = new DangerMeter(960 - 150, 80, 300, 20, 35);
   }
 
   async init(): Promise<void> {
@@ -225,6 +236,9 @@ export class DepthDiveScene implements Scene {
     // Update systems
     this.juice.update(dt);
     this.discoverySystem.update(dt);
+
+    // Update danger meter pulse animation
+    this.dangerMeter.update(dt);
   }
 
   render(): void {
@@ -281,6 +295,10 @@ export class DepthDiveScene implements Scene {
       align: 'center'
     });
 
+    // Danger meter - centered below round counter
+    const collapseRisk = COLLAPSE_PROBABILITY * 100; // 35%
+    this.dangerMeter.render(display, collapseRisk);
+
     // Shields - left of round
     display.drawText(`SHIELDS: ${run.shields}/${MAX_SHIELDS}`, 700, 50, {
       font: FONTS.headingFont,
@@ -324,18 +342,11 @@ export class DepthDiveScene implements Scene {
       alpha: 0.5
     });
 
-    // Energy - top-left
+    // Energy display using BatteryCoreDisplay - top-left
     const energy = Math.floor(this.game.state.energy);
-    display.drawText(`ENERGY: ${energy}`, 50, 50, {
-      font: FONTS.headingFont,
-      fill: COLORS.neonCyan
-    });
-
-    // Extracted rewards
-    display.drawText(`EXTRACTED: ${Math.floor(run.extractedRewards)}`, 50, 80, {
-      font: FONTS.labelFont,
-      fill: COLORS.neonMagenta
-    });
+    const energyCap = 1000; // BASE_ENERGY_CAP
+    const extractedLabel = `EXTRACTED: ${Math.floor(run.extractedRewards)}`;
+    this.batteryDisplay.render(display, energy, energyCap, extractedLabel);
   }
 
   private renderMiniMap(display: typeof MakkoEngine.display): void {
@@ -364,7 +375,7 @@ export class DepthDiveScene implements Scene {
       align: 'center'
     });
 
-    // Draw nodes
+    // Draw nodes using NodeVisual component (mini mode)
     const cellWidth = mapWidth / 4;
     const cellHeight = (mapHeight - 40) / 4;
 
@@ -373,22 +384,15 @@ export class DepthDiveScene implements Scene {
       const nodeY = mapY + 40 + (node.gridPosition.row * cellHeight) + cellHeight / 2;
       const nodeRadius = 8 + (node.level - 1) * 3;
 
-      const color = node.owner === 'player' ? COLORS.neonCyan : COLORS.dimText;
-      
-      display.drawCircle(nodeX, nodeY, nodeRadius, {
-        fill: color,
-        alpha: node.owner === 'player' ? 0.8 : 0.3
-      });
-
-      // Level indicator for player nodes
-      if (node.owner === 'player' && node.level > 1) {
-        display.drawText(`${node.level}`, nodeX, nodeY + 3, {
-          font: FONTS.tinyFont,
-          fill: COLORS.background,
-          align: 'center',
-          baseline: 'middle'
-        });
-      }
+      // Use NodeVisual in mini mode for simplified rendering
+      const nodeVisual = new NodeVisual(nodeX, nodeY, nodeRadius, node.level);
+      const options: NodeVisualOptions = {
+        owner: node.owner === 'player' ? 'player' : 'neutral',
+        stability: node.stability,
+        hovered: false,
+        mini: true
+      };
+      nodeVisual.render(display, options);
     }
   }
 

@@ -470,6 +470,28 @@
       "metadata": {
         "character_id": "9a417b7d-5f9a-4aad-97e6-090ad63d62e3"
       }
+    },
+    "derelictcommon_derelict_common_core": {
+      "animations": {
+        "derelictcommon_idlerotation_default": {
+          "fps": 24,
+          "json": "https://api.makko.ai/storage/v1/object/public/sprite-sheets/ec8388e4-636e-4a3d-a34f-35b8f3d550c8/derelictcommon_idlerotation_default.json?t=1773088654270",
+          "image": "https://api.makko.ai/storage/v1/object/public/sprite-sheets/ec8388e4-636e-4a3d-a34f-35b8f3d550c8/derelictcommon_idlerotation_default.webp?t=1773088654270",
+          "priority": "medium",
+          "frameCount": 96,
+          "spriteSheetId": "c97be7b0-200e-408a-b41b-d913675e3877",
+          "animationLength": 4,
+          "metadata": {
+            "dimensions": {
+              "width": 462,
+              "height": 313
+            }
+          }
+        }
+      },
+      "metadata": {
+        "character_id": "abcb7641-b7c9-48ac-b645-691bb72de928"
+      }
     }
   }
 }

@@ -26,26 +26,6 @@ const SPACEFIELD_WIDTH = 1620;
 const SPACEFIELD_HEIGHT = 1080;
 
 /**
- * Canvas dimensions
- */
-const CANVAS_WIDTH = 1920;
-const CANVAS_HEIGHT = 1080;
-
-/**
- * Mask/viewport dimensions (the white box "window")
- */
-const MASK_WIDTH = 270;
-const MASK_HEIGHT = 200;
-
-/**
- * White box center position on cryochambernew (1920x1080)
- * Scaled from original (500, 365) on 1350x1080 asset
- * X: 500 * (1920/1350) ≈ 711
- */
-const WHITE_BOX_CENTER_X = 711;
-const WHITE_BOX_CENTER_Y = 365;
-
-/**
  * CryoChamberScene - parallax window view into space using clipping mask
  */
 export class CryoChamberScene implements Scene {
@@ -70,6 +50,7 @@ export class CryoChamberScene implements Scene {
 
   async init(): Promise<void> {
     // Check if assets are loaded
+    // Using cryochambernew (1920x1080) instead of cryochambernews (1350x1080) for proper aspect ratio
     this.cryoChamberLoaded = MakkoEngine.hasStaticAsset('cryochambernew');
     this.spacefieldLoaded = MakkoEngine.hasStaticAsset('spacefield');
 
@@ -126,7 +107,7 @@ export class CryoChamberScene implements Scene {
   render(): void {
     const display = MakkoEngine.display;
 
-    // Get assets
+    // Get assets (using 1920x1080 version for proper aspect ratio)
     const cryoChamber = MakkoEngine.staticAsset('cryochambernew');
     const spacefield = MakkoEngine.staticAsset('spacefield');
 
@@ -136,43 +117,93 @@ export class CryoChamberScene implements Scene {
       return;
     }
 
-    // Clear with dark background
-    display.clear('#0a0e1a');
+    // Clear with space black (matches background assets)
+    display.clear('#000000');
 
-    // For cryochambernew (1920x1080), no scaling needed
-    // Calculate mask position relative to canvas center
-    const canvasCenterX = CANVAS_WIDTH / 2; // 960
-    const canvasCenterY = CANVAS_HEIGHT / 2; // 540
-
-    // Offset from canvas center to white box center
-    const offsetFromCenterX = WHITE_BOX_CENTER_X - canvasCenterX;
-    const offsetFromCenterY = WHITE_BOX_CENTER_Y - canvasCenterY;
-
-    // Mask center position on screen
-    const maskCenterX = canvasCenterX + offsetFromCenterX;
-    const maskCenterY = canvasCenterY + offsetFromCenterY;
-
-    // Mask top-left position
-    const maskX = maskCenterX - MASK_WIDTH / 2;
-    const maskY = maskCenterY - MASK_HEIGHT / 2;
-
-    // Draw with clipping mask:
-    // 1. Push clip rect for the viewport
-    display.pushClipRect(maskX, maskY, MASK_WIDTH, MASK_HEIGHT);
-
-    // 2. Draw spacefield tiles within clipped region
-    const drawX1 = -this.xOffset;
-    const drawX2 = SPACEFIELD_WIDTH - this.xOffset;
-    display.drawImage(spacefield.image, drawX1, 0, SPACEFIELD_WIDTH, SPACEFIELD_HEIGHT);
-    display.drawImage(spacefield.image, drawX2, 0, SPACEFIELD_WIDTH, SPACEFIELD_HEIGHT);
-
-    // 3. Pop clip
+    // === SCALING CALCULATIONS ===
+    const canvasWidth = display.width;
+    const canvasHeight = display.height;
+    const assetWidth = cryoChamber.width;
+    const assetHeight = cryoChamber.height;
+    
+    const scaleFactor = Math.floor(Math.max(canvasWidth / assetWidth, canvasHeight / assetHeight) * 1000) / 1000;
+    const scaledWidth = Math.floor(assetWidth * scaleFactor);
+    const scaledHeight = Math.floor(assetHeight * scaleFactor);
+    const drawX = Math.floor((canvasWidth - scaledWidth) / 2);
+    const drawY = Math.floor((canvasHeight - scaledHeight) / 2);
+    
+    const whiteBoxCenterX = 675;
+    const whiteBoxCenterY = 400;
+    const maskWidthOriginal = 350;
+    const maskHeightOriginal = 200;
+    const cornerRadius = Math.floor(20 * scaleFactor);
+    
+    const scaledWhiteBoxCenterX = Math.floor(whiteBoxCenterX * scaleFactor);
+    const scaledWhiteBoxCenterY = Math.floor(whiteBoxCenterY * scaleFactor);
+    const maskCenterX = Math.floor(drawX + scaledWhiteBoxCenterX);
+    const maskCenterY = Math.floor(drawY + scaledWhiteBoxCenterY);
+    const maskWidth = Math.floor(maskWidthOriginal * scaleFactor);
+    const maskHeight = Math.floor(maskHeightOriginal * scaleFactor);
+    const maskX = Math.floor(maskCenterX - maskWidth / 2);
+    const maskY = Math.floor(maskCenterY - maskHeight / 2);
+    
+    // STEP 1: Draw scaled CryoChamberNews first (covers canvas, including white box)
+    display.drawImage(cryoChamber.image, drawX, drawY, scaledWidth, scaledHeight);
+    
+    // STEP 2: Draw spacefield ON TOP, but only within the window area
+    display.pushClipRect(maskX, maskY, maskWidth, maskHeight);
+    
+    // Floor scroll offsets to prevent sub-pixel jitter during parallax animation
+    const spacefieldOffsetX = -100;
+    const spacefieldOffsetY = -5;
+    const drawX1 = Math.floor(-this.xOffset + spacefieldOffsetX);
+    const drawX2 = Math.floor(SPACEFIELD_WIDTH - this.xOffset + spacefieldOffsetX);
+    const spacefieldY = Math.floor(spacefieldOffsetY);
+    display.drawImage(spacefield.image, drawX1, spacefieldY, SPACEFIELD_WIDTH, SPACEFIELD_HEIGHT);
+    display.drawImage(spacefield.image, drawX2, spacefieldY, SPACEFIELD_WIDTH, SPACEFIELD_HEIGHT);
+    
+    display.popClip();
+    
+    // STEP 3: Create rounded corners by covering sharp corners with foreground circles
+    // Draw BOTH spacefield copies at each corner to ensure coverage at all scroll positions
+    
+    // Top-left corner
+    display.pushClipRect(maskX, maskY, cornerRadius, cornerRadius);
+    display.drawImage(cryoChamber.image, drawX, drawY, scaledWidth, scaledHeight);
+    display.popClip();
+    display.pushClipCircle(maskX + cornerRadius, maskY + cornerRadius, cornerRadius);
+    display.drawImage(spacefield.image, drawX1, spacefieldY, SPACEFIELD_WIDTH, SPACEFIELD_HEIGHT);
+    display.drawImage(spacefield.image, drawX2, spacefieldY, SPACEFIELD_WIDTH, SPACEFIELD_HEIGHT);
+    display.popClip();
+    
+    // Top-right corner
+    display.pushClipRect(maskX + maskWidth - cornerRadius, maskY, cornerRadius, cornerRadius);
+    display.drawImage(cryoChamber.image, drawX, drawY, scaledWidth, scaledHeight);
+    display.popClip();
+    display.pushClipCircle(maskX + maskWidth - cornerRadius, maskY + cornerRadius, cornerRadius);
+    display.drawImage(spacefield.image, drawX1, spacefieldY, SPACEFIELD_WIDTH, SPACEFIELD_HEIGHT);
+    display.drawImage(spacefield.image, drawX2, spacefieldY, SPACEFIELD_WIDTH, SPACEFIELD_HEIGHT);
+    display.popClip();
+    
+    // Bottom-left corner
+    display.pushClipRect(maskX, maskY + maskHeight - cornerRadius, cornerRadius, cornerRadius);
+    display.drawImage(cryoChamber.image, drawX, drawY, scaledWidth, scaledHeight);
+    display.popClip();
+    display.pushClipCircle(maskX + cornerRadius, maskY + maskHeight - cornerRadius, cornerRadius);
+    display.drawImage(spacefield.image, drawX1, spacefieldY, SPACEFIELD_WIDTH, SPACEFIELD_HEIGHT);
+    display.drawImage(spacefield.image, drawX2, spacefieldY, SPACEFIELD_WIDTH, SPACEFIELD_HEIGHT);
+    display.popClip();
+    
+    // Bottom-right corner
+    display.pushClipRect(maskX + maskWidth - cornerRadius, maskY + maskHeight - cornerRadius, cornerRadius, cornerRadius);
+    display.drawImage(cryoChamber.image, drawX, drawY, scaledWidth, scaledHeight);
+    display.popClip();
+    display.pushClipCircle(maskX + maskWidth - cornerRadius, maskY + maskHeight - cornerRadius, cornerRadius);
+    display.drawImage(spacefield.image, drawX1, spacefieldY, SPACEFIELD_WIDTH, SPACEFIELD_HEIGHT);
+    display.drawImage(spacefield.image, drawX2, spacefieldY, SPACEFIELD_WIDTH, SPACEFIELD_HEIGHT);
     display.popClip();
 
-    // 4. Draw CryoChamberNew (1920x1080) - no scaling needed, draw at origin
-    display.drawImage(cryoChamber.image, 0, 0, cryoChamber.width, cryoChamber.height);
-
-    // 5. Draw skip hint
+    // Draw skip hint
     this.renderSkipHint(display);
   }
 

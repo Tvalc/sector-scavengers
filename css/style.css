@@ -15,17 +15,12 @@ html, body {
 .container {
   width: 100%;
   height: 100%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background: #0a0e1a; /* Deep space black - letterbox */
+  overflow: hidden;
 }
 
 #gameCanvas {
   display: block;
-  max-width: 100%;
-  max-height: 100%;
-  /* MakkoEngine.display handles width, height, and aspect-ratio */
+  /* MakkoEngine handles sizing via fitToWindow */
 }
 
 /* Custom styles below */

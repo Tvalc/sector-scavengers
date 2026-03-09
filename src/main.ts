@@ -108,6 +108,14 @@ async function main(): Promise<void> {
     // Disable image smoothing for pixel art
     MakkoEngine.display.setImageSmoothing(false);
 
+    // Stretch to fill window - NO aspect ratio preservation
+    MakkoEngine.display.fitToWindow(false);
+    
+    // Update size on resize to keep filling the window
+    window.addEventListener('resize', () => {
+      MakkoEngine.display.fitToWindow(false);
+    });
+
     // Initialize Play.fun SDK (dynamic injection)
     try {
       await initPlayFun();
@@ -136,6 +144,27 @@ async function main(): Promise<void> {
     }
 
     // Capture game keys
+    // Fullscreen toggle (Shift+F)
+    let isFullscreen = false;
+    const toggleFullscreen = async (): Promise<void> => {
+      try {
+        if (isFullscreen) {
+          await MakkoEngine.display.exitFullscreen();
+          isFullscreen = false;
+        } else {
+          await MakkoEngine.display.requestFullscreen();
+          isFullscreen = true;
+        }
+      } catch (error) {
+        console.warn('[Main] Fullscreen toggle failed:', error instanceof Error ? error.message : error);
+      }
+    };
+
+    // Track fullscreen state changes (user pressing Escape, etc.)
+    MakkoEngine.display.onFullscreenChange = (fullscreen: boolean) => {
+      isFullscreen = fullscreen;
+    };
+
     MakkoEngine.input.capture([
       'Space',
       'Enter',
@@ -153,12 +182,28 @@ async function main(): Promise<void> {
       'Digit3'
     ]);
 
+    // Shift+F for fullscreen toggle - check in game loop
+    (window as Window & { fullscreenKeyCheck?: () => void }).fullscreenKeyCheck = () => {
+      if (MakkoEngine.input.isKeyDown('ShiftLeft') && MakkoEngine.input.isKeyPressed('KeyF')) {
+        toggleFullscreen();
+      }
+      if (MakkoEngine.input.isKeyDown('ShiftRight') && MakkoEngine.input.isKeyPressed('KeyF')) {
+        toggleFullscreen();
+      }
+    };
+
     // Initialize and start game
     const game = new Game();
     await game.init();
     game.start();
 
+    // Hook fullscreen toggle into game loop
+    game.fullscreenToggleCallback = () => {
+      (window as Window & { fullscreenKeyCheck?: () => void }).fullscreenKeyCheck?.();
+    };
+
     console.log('[Main] Game started successfully');
+    console.log('[Main] ========== BUILD TEST VERSION 3 ==========');
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
     console.error(`[Main] Initialization error: ${message}`);

@@ -56,6 +56,8 @@ export interface GameState {
   tutorialSeen: boolean;
   /** Whether the tutorial should be skipped (player preference) */
   tutorialSkipped?: boolean;
+  /** Selected hub node IDs for next dive (0-15) */
+  hubSelectedNodes: number[];
 }
 
 /**
@@ -89,7 +91,8 @@ export function createInitialState(): GameState {
     totalExtractions: 0,
     totalCollapses: 0,
     tutorialSeen: false,
-    tutorialSkipped: false
+    tutorialSkipped: false,
+    hubSelectedNodes: []
   };
 }
 

@@ -1,20 +1,21 @@
 /**
  * Idle Scene
  * 
- * Main hub with 4x4 isometric node grid, energy display, inventory panel,
- * viral multiplier badge, Depth Dive trigger, How to Play modal, and Signal Log.
+ * Main hub with SSSSBoards2 board, spaceship selection, energy display, 
+ * inventory panel, viral multiplier badge, Depth Dive trigger, How to Play modal, and Signal Log.
  */
 
-import { MakkoEngine } from '@makko/engine';
+import { MakkoEngine, IDisplay, StaticAsset } from '@makko/engine';
 import type { Scene } from '../scene/interfaces';
 import type { Game } from '../game/game';
 import { IdleSystem } from '../systems/idle-system';
-import { NodeSystem, ScreenPosition } from '../systems/node-system';
+import { HubSystem, HubCellState } from '../systems/hub-system';
 import { InventorySystem, SLOT_LIMITS } from '../systems/inventory-system';
 import { SocialMultiplierSystem } from '../systems/social-multiplier-system';
 import { SignalLogSystem, signalLogSystem } from '../systems/signal-log-system';
-import { Node, NodeOwner } from '../types/node';
 import { COLORS, FONTS, LAYOUT } from '../ui/theme';
+import { BatteryCoreDisplay } from '../ui/visual-components';
+import { SpaceshipVisual } from '../ui/spaceship-visual';
 
 /**
  * How to Play modal content
@@ -29,8 +30,14 @@ const HOW_TO_PLAY_CONTENT = {
   ]
 };
 
+/** Board asset name from manifest */
+const BOARD_ASSET_NAME = 'ssssboards2';
+
+/** Board position on screen (x offset) */
+const BOARD_X = 285;
+
 /**
- * IdleScene - main hub scene
+ * IdleScene - main hub scene with board and spaceship selection
  */
 export class IdleScene implements Scene {
   readonly id = 'idle';
@@ -38,56 +45,97 @@ export class IdleScene implements Scene {
 
   private game: Game;
   private idleSystem: IdleSystem;
-  private nodeSystem: NodeSystem;
+  private hubSystem: HubSystem;
   private inventorySystem: InventorySystem;
   private socialMultiplierSystem: SocialMultiplierSystem;
   private signalLog: SignalLogSystem;
 
+  // Spaceship visuals for cells with spaceships
+  private spaceshipVisuals: Map<number, SpaceshipVisual> = new Map();
+
   // UI State
   private showHowToPlay: boolean = false;
-  private hoveredNodeId: number | null = null;
-  private tooltipNode: Node | null = null;
-  private tooltipPosition: { x: number; y: number } = { x: 0, y: 0 };
+  private hoveredCellId: number | null = null;
 
   // Button bounds
   private diveButtonBounds = { x: 860, y: 900, width: 200, height: 60 };
   private helpButtonBounds = { x: 1850, y: 20, width: 50, height: 50 };
 
-  // Grid config
-  private gridConfig = {
-    cellWidth: 180,
-    cellHeight: 180,
-    centerX: 960,
-    centerY: 540
-  };
+  // Visual components
+  private batteryDisplay: BatteryCoreDisplay;
+
+  // Board static asset
+  private boardAsset: StaticAsset | null = null;
 
   constructor(game: Game) {
     this.game = game;
     this.idleSystem = new IdleSystem(game);
-    this.nodeSystem = new NodeSystem(this.gridConfig);
+    this.hubSystem = new HubSystem();
     this.inventorySystem = new InventorySystem(game);
     this.socialMultiplierSystem = new SocialMultiplierSystem(game);
     this.signalLog = signalLogSystem;
+
+    // Initialize visual components
+    this.batteryDisplay = new BatteryCoreDisplay(30, 30, 400, 40);
   }
 
   async init(): Promise<void> {
     // Initialize systems
     this.inventorySystem.loadFromGameState();
     
-    // Sync node state from game
-    this.nodeSystem.importNodes(this.game.state.nodes);
+    // Load board asset
+    this.loadBoardAsset();
+  }
+
+  /**
+   * Load the board static asset
+   */
+  private loadBoardAsset(): void {
+    if (MakkoEngine.hasStaticAsset(BOARD_ASSET_NAME)) {
+      this.boardAsset = MakkoEngine.staticAsset(BOARD_ASSET_NAME);
+    }
   }
 
   enter(previousScene?: string): void {
     this.game.updateViralMultiplier();
     this.idleSystem.reset();
-    this.nodeSystem.importNodes(this.game.state.nodes);
     this.inventorySystem.loadFromGameState();
     this.showHowToPlay = false;
+
+    // Reload board asset if needed
+    if (!this.boardAsset) {
+      this.loadBoardAsset();
+    }
+
+    // Populate the board with random spaceships
+    this.hubSystem.populate();
+
+    // Create spaceship visuals for populated cells
+    this.createSpaceshipVisuals();
   }
 
   exit(nextScene?: string): void {
     this.showHowToPlay = false;
+    this.spaceshipVisuals.clear();
+  }
+
+  /**
+   * Create spaceship visual instances for cells with spaceships
+   */
+  private createSpaceshipVisuals(): void {
+    this.spaceshipVisuals.clear();
+
+    for (const cell of this.hubSystem.cells) {
+      if (cell.hasSpaceship && cell.rarity) {
+        const visual = new SpaceshipVisual(
+          cell.definition.centerX,
+          cell.definition.centerY,
+          cell.rarity,
+          1.0
+        );
+        this.spaceshipVisuals.set(cell.definition.id, visual);
+      }
+    }
   }
 
   handleInput(): void {
@@ -104,9 +152,8 @@ export class IdleScene implements Scene {
       return;
     }
 
-    // Start Depth Dive on Space (if not showing modal)
-    if (input.isKeyPressed('Space') && !this.showHowToPlay) {
-      this.game.startDepthDive();
+    // If modal is showing, don't process other input
+    if (this.showHowToPlay) {
       return;
     }
 
@@ -119,7 +166,7 @@ export class IdleScene implements Scene {
       if (this.isPointInBounds(mouseX, mouseY, this.diveButtonBounds)) {
         MakkoEngine.display.setCursor('pointer');
         if (input.isMousePressed(0)) {
-          this.game.startDepthDive();
+          this.handleDiveClick();
           return;
         }
       }
@@ -131,21 +178,43 @@ export class IdleScene implements Scene {
           return;
         }
       }
-      // Check node hover
+      // Check hub cells
       else {
-        const nodeId = this.nodeSystem.getNodeIdAtScreen(mouseX, mouseY);
-        if (nodeId !== null) {
-          this.hoveredNodeId = nodeId;
-          this.tooltipNode = this.nodeSystem.getNode(nodeId) ?? null;
-          this.tooltipPosition = { x: mouseX, y: mouseY };
+        const cellId = this.hubSystem.getCellAtPosition(mouseX, mouseY);
+        const cell = cellId !== null ? this.hubSystem.getCell(cellId) : null;
+
+        if (cell && cell.hasSpaceship) {
+          this.hoveredCellId = cellId;
           MakkoEngine.display.setCursor('pointer');
+
+          if (input.isMousePressed(0)) {
+            this.hubSystem.selectCell(cellId);
+          }
         } else {
-          this.hoveredNodeId = null;
-          this.tooltipNode = null;
+          this.hoveredCellId = null;
           MakkoEngine.display.setCursor('default');
         }
       }
     }
+  }
+
+  /**
+   * Handle DIVE button click
+   */
+  private handleDiveClick(): void {
+    const selectedCount = this.hubSystem.getSelectedCount();
+    
+    // Require at least 1 selected cell
+    if (selectedCount < 1) {
+      return;
+    }
+
+    // Store selected cell IDs in game state
+    const selectedIds = this.hubSystem.getSelectedCellIds();
+    this.game.setHubSelectedNodes(selectedIds);
+
+    // Start the depth dive
+    this.game.startDepthDive();
   }
 
   private isPointInBounds(x: number, y: number, bounds: { x: number; y: number; width: number; height: number }): boolean {
@@ -158,24 +227,24 @@ export class IdleScene implements Scene {
     this.idleSystem.update(dt);
     this.socialMultiplierSystem.update(dt);
     this.signalLog.update(dt);
-    
-    // Sync node state back to game
-    const exportedNodes = this.nodeSystem.exportNodes();
-    for (let i = 0; i < this.game.state.nodes.length; i++) {
-      const exported = exportedNodes[i];
-      this.game.state.nodes[i] = exported;
+
+    // Update spaceship animations
+    for (const visual of this.spaceshipVisuals.values()) {
+      visual.update(dt);
     }
   }
 
   render(): void {
     const display = MakkoEngine.display;
-    const { width, height } = display;
 
     // Clear background
     display.clear(COLORS.background);
 
-    // Render grid
-    this.renderGrid(display);
+    // Render board background
+    this.renderBoard(display);
+
+    // Render spaceships with selection
+    this.renderSpaceships(display);
 
     // Render UI elements
     this.renderEnergyDisplay(display);
@@ -183,11 +252,6 @@ export class IdleScene implements Scene {
     this.renderViralMultiplierBadge(display);
     this.renderDiveButton(display);
     this.renderHelpButton(display);
-
-    // Render tooltip if hovering node
-    if (this.tooltipNode) {
-      this.renderNodeTooltip(display);
-    }
 
     // Render Signal Log at bottom
     this.signalLog.render(display);
@@ -199,144 +263,52 @@ export class IdleScene implements Scene {
   }
 
   /**
-   * Render 4x4 isometric grid
+   * Render the board background image
    */
-  private renderGrid(display: typeof MakkoEngine.display): void {
-    const nodes = this.nodeSystem.getAllNodes();
-
-    for (const node of nodes) {
-      const pos = this.nodeSystem.idToScreen(node.id);
-      this.renderNode(display, node, pos);
+  private renderBoard(display: IDisplay): void {
+    if (this.boardAsset) {
+      display.drawImage(
+        this.boardAsset.image,
+        BOARD_X,
+        0,
+        this.boardAsset.width,
+        this.boardAsset.height
+      );
     }
   }
 
   /**
-   * Render a single node as procedural hexagon
+   * Render all spaceships with selection highlights
    */
-  private renderNode(display: typeof MakkoEngine.display, node: Node, pos: ScreenPosition): void {
-    const isHovered = this.hoveredNodeId === node.id;
-    const isPlayer = node.owner === 'player';
+  private renderSpaceships(display: IDisplay): void {
+    for (const cell of this.hubSystem.cells) {
+      if (!cell.hasSpaceship) continue;
 
-    // Level-based heights: 80, 120, 160
-    const baseHeight = 80 + (node.level - 1) * 40;
-    const radius = 30 + (node.level - 1) * 10;
-
-    // Draw hexagon
-    const hexPoints: Array<{ x: number; y: number }> = [];
-    for (let i = 0; i < 6; i++) {
-      const angle = (Math.PI / 3) * i - Math.PI / 2;
-      hexPoints.push({
-        x: pos.x + Math.cos(angle) * radius,
-        y: pos.y + Math.sin(angle) * radius
-      });
-    }
-
-    // Fill color based on owner
-    const fillColor = isPlayer ? COLORS.neonCyan : COLORS.neutralGray;
-    const fillAlpha = isHovered ? 0.9 : 0.7;
-
-    // Draw glow for player nodes
-    if (isPlayer) {
-      display.drawPolygon(hexPoints, {
-        fill: COLORS.neonCyan,
-        alpha: 0.2
-      });
-    }
-
-    // Draw hexagon fill
-    display.drawPolygon(hexPoints, {
-      fill: fillColor,
-      alpha: fillAlpha
-    });
-
-    // Draw hexagon border
-    display.drawPolygon(hexPoints, {
-      stroke: isPlayer ? COLORS.neonCyan : COLORS.neutralGray,
-      lineWidth: isHovered ? 3 : 2,
-      alpha: 1
-    });
-
-    // Draw level indicator dots
-    for (let i = 0; i < node.level; i++) {
-      const dotY = pos.y + radius * 0.6 - (i * 12);
-      display.drawCircle(pos.x, dotY, 4, {
-        fill: isPlayer ? COLORS.white : COLORS.neutralGray,
-        alpha: 0.9
-      });
-    }
-
-    // Draw stability bar if not 100%
-    if (node.stability < 100 && isPlayer) {
-      const barWidth = radius * 1.5;
-      const barHeight = 4;
-      const barX = pos.x - barWidth / 2;
-      const barY = pos.y + radius + 10;
-
-      // Background
-      display.drawRect(barX, barY, barWidth, barHeight, {
-        fill: COLORS.neutralGray,
-        alpha: 0.5
-      });
-
-      // Fill
-      const fillWidth = barWidth * (node.stability / 100);
-      display.drawRect(barX, barY, fillWidth, barHeight, {
-        fill: node.stability > 30 ? COLORS.neonCyan : COLORS.warningRed,
-        alpha: 0.9
-      });
+      const visual = this.spaceshipVisuals.get(cell.definition.id);
+      if (visual) {
+        visual.render(display, {
+          selected: cell.selected
+        });
+      }
     }
   }
 
   /**
-   * Render energy display at top-left
+   * Render energy display at top-left using BatteryCoreDisplay
    */
-  private renderEnergyDisplay(display: typeof MakkoEngine.display): void {
+  private renderEnergyDisplay(display: IDisplay): void {
     const energy = Math.floor(this.idleSystem.energy);
     const cap = Math.floor(this.idleSystem.energyCap);
     const rate = this.idleSystem.getEnergyRate();
     
-    // Panel dimensions
-    const panelX = 30;
-    const panelY = 30;
-    const panelWidth = 220;
-    const panelHeight = 90;
-    
-    // Panel background with rounded corners
-    display.drawRoundRect(panelX, panelY, panelWidth, panelHeight, LAYOUT.borderRadius, {
-      fill: COLORS.panelBg,
-      alpha: 0.9
-    });
-    
-    // Panel border
-    display.drawRoundRect(panelX, panelY, panelWidth, panelHeight, LAYOUT.borderRadius, {
-      stroke: COLORS.neonCyan,
-      lineWidth: LAYOUT.borderWidth,
-      alpha: 0.5
-    });
-
-    // Energy label
-    display.drawText('ENERGY', panelX + LAYOUT.padding, panelY + 25, {
-      font: FONTS.labelFont,
-      fill: COLORS.dimText
-    });
-
-    // Energy value
-    display.drawText(`${energy} / ${cap}`, panelX + LAYOUT.padding, panelY + 55, {
-      font: FONTS.titleFont,
-      fill: COLORS.neonCyan
-    });
-
-    // Generation rate
-    display.drawText(`+${rate.toFixed(1)}/s`, panelX + LAYOUT.padding, panelY + 78, {
-      font: FONTS.smallFont,
-      fill: COLORS.dimText
-    });
+    // Use polished BatteryCoreDisplay component
+    this.batteryDisplay.render(display, energy, cap, `+${rate.toFixed(1)}/s`);
   }
 
   /**
    * Render inventory panel at top-right
    */
-  private renderInventoryPanel(display: typeof MakkoEngine.display): void {
+  private renderInventoryPanel(display: IDisplay): void {
     const panelX = 1450;
     const panelY = 50;
     const panelWidth = 300;
@@ -395,7 +367,7 @@ export class IdleScene implements Scene {
   /**
    * Render an inventory slot
    */
-  private renderInventorySlot(display: typeof MakkoEngine.display, x: number, y: number, item: { id: string; name: string; category: string } | undefined): void {
+  private renderInventorySlot(display: IDisplay, x: number, y: number, item: { id: string; name: string; category: string } | undefined): void {
     const slotSize = 50;
 
     // Slot background with rounded corners
@@ -434,7 +406,7 @@ export class IdleScene implements Scene {
   /**
    * Render viral multiplier badge
    */
-  private renderViralMultiplierBadge(display: typeof MakkoEngine.display): void {
+  private renderViralMultiplierBadge(display: IDisplay): void {
     const status = this.socialMultiplierSystem.getStatus();
 
     if (!status.active) return;
@@ -475,38 +447,47 @@ export class IdleScene implements Scene {
   /**
    * Render DIVE button at bottom-center
    */
-  private renderDiveButton(display: typeof MakkoEngine.display): void {
+  private renderDiveButton(display: IDisplay): void {
+    const selectedCount = this.hubSystem.getSelectedCount();
+    const canDive = selectedCount >= 1;
+
     const { x, y, width, height } = this.diveButtonBounds;
     const mouseX = MakkoEngine.input.mouseX;
     const mouseY = MakkoEngine.input.mouseY;
     const isHovered = mouseX !== undefined && mouseY !== undefined &&
-      this.isPointInBounds(mouseX, mouseY, this.diveButtonBounds);
+      this.isPointInBounds(mouseX, mouseY, this.diveButtonBounds) && canDive;
+
+    // Determine button colors based on state
+    const buttonColor = canDive ? COLORS.neonCyan : COLORS.dimText;
+    const alpha = isHovered ? 0.3 : (canDive ? 0.1 : 0.05);
+    const borderAlpha = canDive ? 1 : 0.3;
 
     // Glow effect on hover
     if (isHovered) {
       display.drawRoundRect(x - 4, y - 4, width + 8, height + 8, LAYOUT.borderRadius + 2, {
-        fill: COLORS.neonCyan,
+        fill: buttonColor,
         alpha: 0.15
       });
     }
 
     // Button background with rounded corners
     display.drawRoundRect(x, y, width, height, LAYOUT.borderRadius, {
-      fill: COLORS.neonCyan,
-      alpha: isHovered ? 0.3 : 0.1
+      fill: buttonColor,
+      alpha: alpha
     });
 
     // Button border with rounded corners
     display.drawRoundRect(x, y, width, height, LAYOUT.borderRadius, {
-      stroke: COLORS.neonCyan,
+      stroke: buttonColor,
       lineWidth: isHovered ? LAYOUT.borderWidthThick : LAYOUT.borderWidth,
-      alpha: 1
+      alpha: borderAlpha
     });
 
-    // Button text
-    display.drawText('DIVE', x + width / 2, y + height / 2, {
+    // Button text - show selection count
+    const buttonText = `DIVE${selectedCount > 0 ? ` (${selectedCount})` : ''}`;
+    display.drawText(buttonText, x + width / 2, y + height / 2, {
       font: FONTS.headingFont,
-      fill: COLORS.neonCyan,
+      fill: buttonColor,
       align: 'center',
       baseline: 'middle'
     });
@@ -515,7 +496,7 @@ export class IdleScene implements Scene {
   /**
    * Render Help button at top-right corner
    */
-  private renderHelpButton(display: typeof MakkoEngine.display): void {
+  private renderHelpButton(display: IDisplay): void {
     const { x, y, width, height } = this.helpButtonBounds;
     const mouseX = MakkoEngine.input.mouseX;
     const mouseY = MakkoEngine.input.mouseY;
@@ -545,73 +526,9 @@ export class IdleScene implements Scene {
   }
 
   /**
-   * Render node tooltip
-   */
-  private renderNodeTooltip(display: typeof MakkoEngine.display): void {
-    if (!this.tooltipNode) return;
-
-    const tooltipWidth = 180;
-    const tooltipHeight = 80;
-
-    let tooltipX = this.tooltipPosition.x + 20;
-    let tooltipY = this.tooltipPosition.y - tooltipHeight / 2;
-
-    // Keep tooltip on screen
-    if (tooltipX + tooltipWidth > display.width - 10) {
-      tooltipX = this.tooltipPosition.x - tooltipWidth - 20;
-    }
-    if (tooltipY < 10) tooltipY = 10;
-    if (tooltipY + tooltipHeight > display.height - 10) {
-      tooltipY = display.height - tooltipHeight - 10;
-    }
-
-    // Tooltip background with rounded corners
-    display.drawRoundRect(tooltipX, tooltipY, tooltipWidth, tooltipHeight, LAYOUT.borderRadius, {
-      fill: COLORS.panelBg,
-      alpha: 0.95
-    });
-
-    // Tooltip border with rounded corners
-    display.drawRoundRect(tooltipX, tooltipY, tooltipWidth, tooltipHeight, LAYOUT.borderRadius, {
-      stroke: COLORS.neonCyan,
-      lineWidth: 1,
-      alpha: 0.8
-    });
-
-    const node = this.tooltipNode;
-    const textX = tooltipX + LAYOUT.paddingSmall;
-
-    // Node ID
-    display.drawText(`NODE ${node.id}`, textX, tooltipY + LAYOUT.paddingSmall + 10, {
-      font: FONTS.bodyFont,
-      fill: COLORS.white
-    });
-
-    // Level
-    display.drawText(`Level: ${node.level}`, textX, tooltipY + LAYOUT.paddingSmall + 30, {
-      font: FONTS.smallFont,
-      fill: COLORS.dimText
-    });
-
-    // Owner
-    const ownerText = node.owner === 'player' ? 'CONTROLLED' : 'NEUTRAL';
-    const ownerColor = node.owner === 'player' ? COLORS.neonCyan : COLORS.neutralGray;
-    display.drawText(`Status: ${ownerText}`, textX, tooltipY + LAYOUT.paddingSmall + 50, {
-      font: FONTS.smallFont,
-      fill: ownerColor
-    });
-
-    // Stability
-    display.drawText(`Stability: ${node.stability}%`, textX, tooltipY + LAYOUT.paddingSmall + 70, {
-      font: FONTS.smallFont,
-      fill: node.stability > 50 ? COLORS.dimText : COLORS.warningRed
-    });
-  }
-
-  /**
    * Render How to Play modal
    */
-  private renderHowToPlayModal(display: typeof MakkoEngine.display): void {
+  private renderHowToPlayModal(display: IDisplay): void {
     const modalWidth = 600;
     const modalHeight = 400;
     const modalX = (display.width - modalWidth) / 2;
@@ -682,7 +599,7 @@ export class IdleScene implements Scene {
    * Render wrapped text helper
    */
   private renderWrappedText(
-    display: typeof MakkoEngine.display,
+    display: IDisplay,
     text: string,
     x: number,
     y: number,
@@ -713,5 +630,6 @@ export class IdleScene implements Scene {
 
   destroy(): void {
     // Cleanup scene resources
+    this.spaceshipVisuals.clear();
   }
 }
