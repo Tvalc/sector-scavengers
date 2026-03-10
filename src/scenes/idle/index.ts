@@ -163,11 +163,22 @@ export class IdleScene implements Scene {
 
   render(): void {
     const display = MakkoEngine.display;
-    display.clear('#0a0e1a');
-
-    // Background layers
-    this.background.render(display);
+    
+    // Clear canvas (reset to transparent, then we fill with base color)
+    display.clear();
+    
+    // Background layers (stars on top of board for depth)
+    // Explicitly draw base fill to cover entire canvas with solid color
+    this.background.renderBaseFill(display);
+    
+    // Draw spacefield (scrolling background)
+    this.background.renderSpacefield(display);
+    
+    // Draw board overlay
     renderBoard(display, this.boardAsset);
+    
+    // Draw stars on top of board for visual depth
+    this.background.renderStars(display);
     renderSpaceships(display, this.hubSystem, this.spaceshipVisuals, this.debugger as NodeDebugger);
 
     // UI

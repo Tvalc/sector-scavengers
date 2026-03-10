@@ -96,11 +96,13 @@ async function main(): Promise<void> {
     console.log('[Main] Initializing Sector Scavengers...');
 
     // Initialize MakkoEngine with canvas and assets
+    // Use canvas2d renderer for reliable rendering
     await MakkoEngine.initEngine({
       manifests: ['/sprites-manifest.json', '/static-asset-manifest.json'],
-    canvas: document.getElementById('gameCanvas') as HTMLCanvasElement,
-    width: 1920,
-    height: 1080
+      canvas: document.getElementById('gameCanvas') as HTMLCanvasElement,
+      width: 1920,
+      height: 1080,
+      renderer: 'canvas2d'
     });
 
     console.log('[Main] MakkoEngine initialized');

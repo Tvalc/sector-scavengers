@@ -19,7 +19,7 @@ export const HOW_TO_PLAY_CONTENT = {
 };
 
 /** Board asset name from manifest */
-export const BOARD_ASSET_NAME = 'sssssboard';
+export const BOARD_ASSET_NAME = 'ssboard';
 
 /** Board dimensions (full canvas) */
 export const BOARD_WIDTH = 1920;

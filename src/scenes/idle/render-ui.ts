@@ -16,7 +16,7 @@ import { getGlobalCrewEfficiencyBonus } from '../../systems/crew-bonus-system';
 import type { CryoState } from '../../systems/cryo-system';
 
 /** Button bounds for the scene */
-export const DIVE_BUTTON_BOUNDS = { x: 760, y: 900, width: 200, height: 60 };
+export const DIVE_BUTTON_BOUNDS = { x: 560, y: 900, width: 200, height: 60 };
 export const MISSION_BUTTON_BOUNDS = { x: 1670, y: 20, width: 50, height: 50 };
 export const CREW_BUTTON_BOUNDS = { x: 1730, y: 20, width: 50, height: 50 };
 export const INVENTORY_BUTTON_BOUNDS = { x: 1790, y: 20, width: 50, height: 50 };

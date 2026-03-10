@@ -180,6 +180,46 @@
         "height": 1080,
         "format": "png"
       }
+    },
+    "squarescifiuicontainer": {
+      "url": "https://api.makko.ai/storage/v1/object/public/image-assets/0f84fe06-5c42-40c3-b563-1a28d18f37cc/prop/1773155875705_prop.png?t=1773168363162",
+      "name": "SquareSciFiUiContainer",
+      "asset_type": "prop",
+      "metadata": {
+        "width": 594,
+        "height": 582,
+        "format": "png"
+      }
+    },
+    "emptynameplate": {
+      "url": "https://api.makko.ai/storage/v1/object/public/image-assets/0f84fe06-5c42-40c3-b563-1a28d18f37cc/prop/1773155710014_prop.png?t=1773168363831",
+      "name": "EmptyNameplate",
+      "asset_type": "prop",
+      "metadata": {
+        "width": 757,
+        "height": 343,
+        "format": "png"
+      }
+    },
+    "scavenge_button": {
+      "url": "https://api.makko.ai/storage/v1/object/public/image-assets/0f84fe06-5c42-40c3-b563-1a28d18f37cc/prop/1773155576276_prop.png?t=1773168364978",
+      "name": "Scavenge Button",
+      "asset_type": "prop",
+      "metadata": {
+        "width": 550,
+        "height": 548,
+        "format": "png"
+      }
+    },
+    "ssboard": {
+      "url": "https://api.makko.ai/storage/v1/object/public/image-assets/0f84fe06-5c42-40c3-b563-1a28d18f37cc/prop/1773168530017_prop.png?t=1773168819152",
+      "name": "SSBoard",
+      "asset_type": "prop",
+      "metadata": {
+        "width": 1752,
+        "height": 999,
+        "format": "png"
+      }
     }
   }
 }

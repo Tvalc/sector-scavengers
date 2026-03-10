@@ -71,12 +71,14 @@ export class BackgroundRenderer {
   }
 
   /** Render solid base fill to ensure full canvas coverage */
-  private renderBaseFill(display: IDisplay): void {
-    display.drawRect(0, 0, display.width, display.height, { fill: '#0a0e1a' });
+  public renderBaseFill(display: IDisplay): void {
+    // Use explicit 1920x1080 dimensions to ensure full coverage
+    // This guarantees the entire logical canvas is filled
+    display.drawRect(0, 0, 1920, 1080, { fill: '#0a0e1a' });
   }
 
   /** Render scrolling spacefield */
-  private renderSpacefield(display: IDisplay): void {
+  public renderSpacefield(display: IDisplay): void {
     // Lazy load if needed
     if (!this.spacefieldAsset && MakkoEngine.hasStaticAsset('spacefield')) {
       this.spacefieldAsset = MakkoEngine.staticAsset('spacefield');
@@ -95,7 +97,7 @@ export class BackgroundRenderer {
   }
 
   /** Render procedural starfield */
-  private renderStars(display: IDisplay): void {
+  public renderStars(display: IDisplay): void {
     for (const star of this.starPositions) {
       display.drawCircle(star.x, star.y, star.radius, {
         fill: star.color,
