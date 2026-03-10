@@ -131,7 +131,7 @@ export class Game {
     // Register all scenes
     // Scenes will be imported when they're created
     const { StartScene } = await import('../scenes/start-scene');
-    const { IdleScene } = await import('../scenes/idle-scene');
+    const { IdleScene } = await import('../scenes/idle');
     const { DepthDiveScene } = await import('../scenes/depth-dive-scene');
     const { ResultsScene } = await import('../scenes/results-scene');
     const { TutorialScene } = await import('../scenes/tutorial');
