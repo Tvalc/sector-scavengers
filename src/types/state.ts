@@ -3,9 +3,13 @@ import { Resources, createResources } from './resources';
 import { Inventory, createInventory } from './inventory';
 import { CryoState, createCryoState } from '../systems/cryo-system';
 import { Mission } from './mission';
+import { CrewMember } from './crew';
 
 /**
  * Current run state during a Salvage Operation session
+ * 
+ * Design: One ship per run - the player selects a single derelict from the hub,
+ * and the entire dive is about salvaging that specific ship.
  */
 export interface RunState {
   /** Current round (1-10) */
@@ -18,6 +22,12 @@ export interface RunState {
   collapsed: boolean;
   /** Items collected this run (not yet added to inventory) */
   collectedItems: string[];
+  /** Target ship ID for this run (the derelict selected from hub) */
+  targetShipId: number | null;
+  /** Whether the target ship was repaired this run (determines if ship stays on board) */
+  targetRepairedThisRun: boolean;
+  /** Meta progression: Scrap earned from this run (even on death) */
+  scrapEarned: number;
 }
 
 /**
@@ -29,7 +39,10 @@ export function createRunState(): RunState {
     shields: 0,
     extractedRewards: 0,
     collapsed: false,
-    collectedItems: []
+    collectedItems: [],
+    targetShipId: null,
+    targetRepairedThisRun: false,
+    scrapEarned: 0
   };
 }
 
@@ -63,6 +76,8 @@ export interface GameState {
   tutorialSkipped?: boolean;
   /** Selected hub ship IDs for next dive (0-15) */
   hubSelectedShips: number[];
+  /** Ship IDs that stay on the board (repaired but not yet claimed) */
+  persistedShips: number[];
   /** Cryo system state */
   cryoState: CryoState;
   /** Available cryo pod slots to discover */
@@ -73,6 +88,23 @@ export interface GameState {
   availableMissions: Mission[];
   /** Total missions completed (for progression) */
   completedMissionCount: number;
+  /** Meta progression: currency earned on death (for deck unlocks) */
+  deathCurrency: number;
+  /** Meta progression: progress toward next card unlock (0-100) */
+  deckUnlockProgress: number;
+  /** Meta progression: ID of next card to unlock */
+  nextUnlockCardId: string | null;
+  /** Meta progression: unlocked card IDs */
+  unlockedCards: string[];
+  /** 
+   * Ship claim progress: ship ID → progress count
+   * Tracks repairs and run completions toward claim threshold
+   */
+  shipClaimProgress: Record<number, number>;
+  /** Woken crew members available for assignment */
+  crewRoster: CrewMember[];
+  /** Crew assignments: ship/station ID → crew ID */
+  crewAssignments: Record<number, string>;
 }
 
 /**
@@ -94,7 +126,9 @@ export function createInitialState(): GameState {
       powerAccumulated: 0,
       mode: isStarterShip ? 'station' : 'derelict',
       maxRooms: isStarterShip ? 3 : 0,
-      rooms: []
+      rooms: [],
+      claimProgress: 0,
+      claimable: false
     });
   }
   
@@ -112,13 +146,21 @@ export function createInitialState(): GameState {
     tutorialSeen: false,
     tutorialSkipped: false,
     hubSelectedShips: [],
+    persistedShips: [],
+    shipClaimProgress: {},
+    crewRoster: [],
+    crewAssignments: {},
     cryoState: createCryoState(),
     availableCryoPods: 2,
     activeMissions: [],
     availableMissions: [],
-    completedMissionCount: 0
+    completedMissionCount: 0,
+    deathCurrency: 0,
+    deckUnlockProgress: 0,
+    nextUnlockCardId: null,
+    unlockedCards: []
   };
-}
+ }
 
 /**
  * Maximum energy cap (base)
@@ -159,3 +201,22 @@ export const VIRAL_MULTIPLIER_BOOST = 1.5;
  * Viral multiplier duration in milliseconds (2 hours)
  */
 export const VIRAL_MULTIPLIER_DURATION = 2 * 60 * 60 * 1000;
+
+/**
+ * Claim threshold - number of qualifying runs/repairs needed to claim a ship
+ * Can be achieved through:
+ * - 3 REPAIR cards on the target ship, OR
+ * - 3 successful run completions (EXTRACT), OR
+ * - Combination of repairs and runs totaling 3
+ */
+export const CLAIM_THRESHOLD = 3;
+
+/**
+ * Claim cost in power cells
+ */
+export const CLAIM_COST_POWER_CELLS = 5;
+
+/**
+ * Claim cost in energy
+ */
+export const CLAIM_COST_ENERGY = 50;

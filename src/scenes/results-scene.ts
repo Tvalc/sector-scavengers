@@ -276,13 +276,31 @@ export class ResultsScene implements Scene {
       align: 'center'
     });
 
-    // Items collected before collapse
-    if (run && run.collectedItems.length > 0) {
-      display.drawText(`Items recovered: ${run.collectedItems.length}`, width / 2, 450, {
+    // Show meta progression earned
+    if (run && run.scrapEarned > 0) {
+      const progressY = 450;
+      display.drawText(`Scrap earned: +${run.scrapEarned}`, width / 2, progressY, {
         font: FONTS.labelFont,
-        fill: COLORS.neonMagenta,
+        fill: COLORS.neonCyan,
         align: 'center'
       });
+      
+      // Show deck unlock progress
+      const progressPercent = this.game.state.deckUnlockProgress;
+      display.drawText(`Deck Progress: ${progressPercent}%`, width / 2, progressY + 30, {
+        font: FONTS.smallFont,
+        fill: COLORS.dimText,
+        align: 'center'
+      });
+      
+      // Show if a card was unlocked
+      if (this.game.state.nextUnlockCardId) {
+        display.drawText(`NEW CARD UNLOCKED!`, width / 2, progressY + 60, {
+          font: FONTS.labelFont,
+          fill: COLORS.neonMagenta,
+          align: 'center'
+        });
+      }
     }
   }
 

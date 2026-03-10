@@ -20,8 +20,8 @@ export class TutorialBackground {
     if (MakkoEngine.hasStaticAsset('cryochambernews')) {
       this.cryoChamberAsset = MakkoEngine.staticAsset('cryochambernews');
     }
-    if (MakkoEngine.hasStaticAsset('spacefield')) {
-      this.spacefieldAsset = MakkoEngine.staticAsset('spacefield');
+    if (MakkoEngine.hasStaticAsset('spacefield2')) {
+      this.spacefieldAsset = MakkoEngine.staticAsset('spacefield2');
     }
   }
 
@@ -112,8 +112,10 @@ export class TutorialBackground {
     // Draw spacefield within rectangular clip
     display.pushClipRect(maskX, maskY, maskWidth, maskHeight);
 
+    // 2px overlap to hide seam between tiles
+    const overlap = 2;
     const drawX1 = Math.floor(-this.spacefieldOffset + SPACEFIELD_CONFIG.offsetX);
-    const drawX2 = Math.floor(SPACEFIELD_CONFIG.width - this.spacefieldOffset + SPACEFIELD_CONFIG.offsetX);
+    const drawX2 = Math.floor(SPACEFIELD_CONFIG.width - this.spacefieldOffset + SPACEFIELD_CONFIG.offsetX - overlap);
     const spacefieldY = Math.floor(SPACEFIELD_CONFIG.offsetY);
 
     display.drawImage(this.spacefieldAsset.image, drawX1, spacefieldY, SPACEFIELD_CONFIG.width, SPACEFIELD_CONFIG.height);

@@ -16,7 +16,7 @@ import { getGlobalCrewEfficiencyBonus } from '../../systems/crew-bonus-system';
 import type { CryoState } from '../../systems/cryo-system';
 
 /** Button bounds for the scene */
-export const DIVE_BUTTON_BOUNDS = { x: 560, y: 900, width: 200, height: 60 };
+export const DIVE_BUTTON_BOUNDS = { x: 260, y: 900, width: 200, height: 60 };
 export const MISSION_BUTTON_BOUNDS = { x: 1670, y: 20, width: 50, height: 50 };
 export const CREW_BUTTON_BOUNDS = { x: 1730, y: 20, width: 50, height: 50 };
 export const INVENTORY_BUTTON_BOUNDS = { x: 1790, y: 20, width: 50, height: 50 };
@@ -342,7 +342,7 @@ export class UIRenderer {
     }
   }
 
-  /** Render DIVE button */
+  /** Render DIVE button with Scavenge prop */
   renderDiveButton(display: IDisplay, selectedCount: number): void {
     const canDive = selectedCount >= 1;
     const bounds = DIVE_BUTTON_BOUNDS;
@@ -353,38 +353,71 @@ export class UIRenderer {
       isPointInBounds(mouseX, mouseY, bounds) && canDive;
 
     const buttonColor = canDive ? COLORS.neonCyan : COLORS.dimText;
-    const alpha = isHovered ? 0.3 : (canDive ? 0.1 : 0.05);
-    const borderAlpha = canDive ? 1 : 0.3;
 
-    // Glow effect
-    if (isHovered) {
-      display.drawRoundRect(bounds.x - 4, bounds.y - 4, bounds.width + 8, bounds.height + 8, LAYOUT.borderRadius + 2, {
+    // Load and render the Scavenge Button prop
+    const scavengeAsset = MakkoEngine.staticAsset('scavenge_button');
+    if (scavengeAsset) {
+      // Scale the 550x548 asset to fit nicely (about 100x100)
+      const scale = 0.18;
+      const scaledWidth = scavengeAsset.width * scale;
+      const scaledHeight = scavengeAsset.height * scale;
+      
+      // Center the prop on the button bounds
+      const propX = bounds.x + (bounds.width - scaledWidth) / 2;
+      const propY = bounds.y - scaledHeight + 20;
+      
+      // Glow effect on hover
+      if (isHovered) {
+        display.drawCircle(propX + scaledWidth / 2, propY + scaledHeight / 2, scaledWidth * 0.7, {
+          fill: buttonColor,
+          alpha: 0.15
+        });
+      }
+      
+      display.drawImage(scavengeAsset.image, propX, propY, scaledWidth, scaledHeight, {
+        alpha: canDive ? (isHovered ? 1 : 0.85) : 0.4
+      });
+      
+      // "Scavenge" text underneath the prop
+      const textY = propY + scaledHeight + 18;
+      const text = selectedCount > 0 ? `Scavenge (${selectedCount})` : 'Scavenge';
+      display.drawText(text, bounds.x + bounds.width / 2, textY, {
+        font: FONTS.labelFont,
         fill: buttonColor,
-        alpha: 0.15
+        align: 'center',
+        baseline: 'top'
+      });
+    } else {
+      // Fallback to original button style if asset not loaded
+      const alpha = isHovered ? 0.3 : (canDive ? 0.1 : 0.05);
+      const borderAlpha = canDive ? 1 : 0.3;
+
+      if (isHovered) {
+        display.drawRoundRect(bounds.x - 4, bounds.y - 4, bounds.width + 8, bounds.height + 8, LAYOUT.borderRadius + 2, {
+          fill: buttonColor,
+          alpha: 0.15
+        });
+      }
+
+      display.drawRoundRect(bounds.x, bounds.y, bounds.width, bounds.height, LAYOUT.borderRadius, {
+        fill: buttonColor,
+        alpha: alpha
+      });
+
+      display.drawRoundRect(bounds.x, bounds.y, bounds.width, bounds.height, LAYOUT.borderRadius, {
+        stroke: buttonColor,
+        lineWidth: isHovered ? LAYOUT.borderWidthThick : LAYOUT.borderWidth,
+        alpha: borderAlpha
+      });
+
+      const buttonText = `DIVE${selectedCount > 0 ? ` (${selectedCount})` : ''}`;
+      display.drawText(buttonText, bounds.x + bounds.width / 2, bounds.y + bounds.height / 2, {
+        font: FONTS.headingFont,
+        fill: buttonColor,
+        align: 'center',
+        baseline: 'middle'
       });
     }
-
-    // Button background
-    display.drawRoundRect(bounds.x, bounds.y, bounds.width, bounds.height, LAYOUT.borderRadius, {
-      fill: buttonColor,
-      alpha: alpha
-    });
-
-    // Button border
-    display.drawRoundRect(bounds.x, bounds.y, bounds.width, bounds.height, LAYOUT.borderRadius, {
-      stroke: buttonColor,
-      lineWidth: isHovered ? LAYOUT.borderWidthThick : LAYOUT.borderWidth,
-      alpha: borderAlpha
-    });
-
-    // Button text
-    const buttonText = `DIVE${selectedCount > 0 ? ` (${selectedCount})` : ''}`;
-    display.drawText(buttonText, bounds.x + bounds.width / 2, bounds.y + bounds.height / 2, {
-      font: FONTS.headingFont,
-      fill: buttonColor,
-      align: 'center',
-      baseline: 'middle'
-    });
   }
 
   /** Render Help button */

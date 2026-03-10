@@ -1,7 +1,8 @@
 /**
  * Tactic Card types for Depth Dive sessions
+ * Simplified to three core actions: Scavenge, Repair, Extract
  */
-export type CardType = 'SCAN' | 'REPAIR' | 'BYPASS' | 'UPGRADE' | 'EXTRACT';
+export type CardType = 'SCAVENGE' | 'REPAIR' | 'EXTRACT';
 
 /**
  * Represents a tactic card that can be drafted during Depth Dive
@@ -18,71 +19,53 @@ export interface TacticCard {
 }
 
 /**
- * SCAN - Claim a Derelict Ship
- * Cost: 60 Power
+ * SCAVENGE - Risk/reward salvage attempt
+ * Cost: 50 Power
+ * Outcomes:
+ *   0-30%: Valuable item (added to run loot)
+ *   30-50%: Power cell (added to resources)
+ *   50-80%: Small energy (added to run rewards)
+ *   80-100%: Hull breach (run ends, lose all rewards)
  */
-export const SCAN_CARD: TacticCard = {
-  type: 'SCAN',
-  energyCost: 60,
-  description: 'Claim a Derelict Ship',
-  hasRisk: false
+export const SCAVENGE_CARD: TacticCard = {
+  type: 'SCAVENGE',
+  energyCost: 50,
+  description: 'Risk hull breach for rewards',
+  hasRisk: true
 };
 
 /**
- * REPAIR - Restore Hull Integrity
+ * REPAIR - Restore Hull Integrity on Target Ship
  * Cost: 40 Power
+ * In one-ship-per-run: Only repairs the target ship
+ * Sets targetRepairedThisRun flag (ship stays on board after run)
  */
 export const REPAIR_CARD: TacticCard = {
   type: 'REPAIR',
   energyCost: 40,
-  description: 'Restore Hull Integrity',
+  description: 'Repair target ship hull',
   hasRisk: false
 };
 
 /**
- * BYPASS - Gain +1 Shield
- * Cost: 30 Energy
- * Max Shields: 2
- */
-export const BYPASS_CARD: TacticCard = {
-  type: 'BYPASS',
-  energyCost: 30,
-  description: 'Gain +1 Shield (Max 2)',
-  hasRisk: false
-};
-
-/**
- * UPGRADE - Upgrade Ship Class
- * Cost: 25 Power
- */
-export const UPGRADE_CARD: TacticCard = {
-  type: 'UPGRADE',
-  energyCost: 25,
-  description: 'Upgrade Ship Class',
-  hasRisk: false
-};
-
-/**
- * EXTRACT - Salvage ship for resources
+ * EXTRACT - Exit run with current loot
  * Cost: Free
- * Risk: 35% Hull Breach (resets ship, empties run loot unless Shielded)
- * Payout: $100 × (1 + Ship Class) × viralMultiplier
+ * Safely ends the run and keeps all collected rewards
+ * No hull breach risk (safe exit)
  */
 export const EXTRACT_CARD: TacticCard = {
   type: 'EXTRACT',
   energyCost: 0,
-  description: 'Salvage ship for resources. 35% hull breach risk!',
-  hasRisk: true
+  description: 'Exit run with loot (safe)',
+  hasRisk: false
 };
 
 /**
  * All available tactic cards
  */
 export const ALL_CARDS: TacticCard[] = [
-  SCAN_CARD,
+  SCAVENGE_CARD,
   REPAIR_CARD,
-  BYPASS_CARD,
-  UPGRADE_CARD,
   EXTRACT_CARD
 ];
 

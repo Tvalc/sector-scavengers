@@ -41,6 +41,10 @@ export interface Spacecraft {
   maxRooms: number;
   /** Rooms built on this ship (stations only) */
   rooms: Room[];
+  /** Claim progress: number of qualifying runs/repairs (threshold: 3) */
+  claimProgress: number;
+  /** Whether ship is ready to claim (claimProgress >= 3) */
+  claimable: boolean;
 }
 
 // Re-export Room types for convenience
@@ -59,7 +63,9 @@ export function createSpacecraft(id: number, row: number, col: number): Spacecra
     powerAccumulated: 0,
     mode: 'derelict',
     maxRooms: 0,
-    rooms: []
+    rooms: [],
+    claimProgress: 0,
+    claimable: false
   };
 }
 

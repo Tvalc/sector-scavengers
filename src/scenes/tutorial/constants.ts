@@ -57,7 +57,7 @@ export const INTRO_CONFIG = {
  * Spacefield parallax configuration
  */
 export const SPACEFIELD_CONFIG = {
-  width: 1620,
+  width: 1920,
   height: 1080,
   offsetX: -100,
   offsetY: -5

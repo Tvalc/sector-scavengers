@@ -202,7 +202,7 @@
       }
     },
     "scavenge_button": {
-      "url": "https://api.makko.ai/storage/v1/object/public/image-assets/0f84fe06-5c42-40c3-b563-1a28d18f37cc/prop/1773155576276_prop.png?t=1773168364978",
+      "url": "https://api.makko.ai/storage/v1/object/public/image-assets/0f84fe06-5c42-40c3-b563-1a28d18f37cc/prop/1773155576276_prop.png?t=1773172661608",
       "name": "Scavenge Button",
       "asset_type": "prop",
       "metadata": {
@@ -212,12 +212,22 @@
       }
     },
     "ssboard": {
-      "url": "https://api.makko.ai/storage/v1/object/public/image-assets/0f84fe06-5c42-40c3-b563-1a28d18f37cc/prop/1773168530017_prop.png?t=1773168819152",
+      "url": "https://api.makko.ai/storage/v1/object/public/image-assets/0f84fe06-5c42-40c3-b563-1a28d18f37cc/prop/1773168530017_prop.png?t=1773170401170",
       "name": "SSBoard",
       "asset_type": "prop",
       "metadata": {
         "width": 1752,
         "height": 999,
+        "format": "png"
+      }
+    },
+    "spacefield2": {
+      "url": "https://api.makko.ai/storage/v1/object/public/image-assets/0f84fe06-5c42-40c3-b563-1a28d18f37cc/background/1773170264883_background.png?t=1773171092072",
+      "name": "Spacefield2",
+      "asset_type": "background",
+      "metadata": {
+        "width": 1920,
+        "height": 1080,
         "format": "png"
       }
     }

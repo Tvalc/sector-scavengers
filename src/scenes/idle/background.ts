@@ -31,8 +31,8 @@ export class BackgroundRenderer {
 
   /** Load assets (call from scene init/enter) */
   loadAssets(): void {
-    if (MakkoEngine.hasStaticAsset('spacefield')) {
-      this.spacefieldAsset = MakkoEngine.staticAsset('spacefield');
+    if (MakkoEngine.hasStaticAsset('spacefield2')) {
+      this.spacefieldAsset = MakkoEngine.staticAsset('spacefield2');
     }
   }
 
@@ -80,8 +80,8 @@ export class BackgroundRenderer {
   /** Render scrolling spacefield */
   public renderSpacefield(display: IDisplay): void {
     // Lazy load if needed
-    if (!this.spacefieldAsset && MakkoEngine.hasStaticAsset('spacefield')) {
-      this.spacefieldAsset = MakkoEngine.staticAsset('spacefield');
+    if (!this.spacefieldAsset && MakkoEngine.hasStaticAsset('spacefield2')) {
+      this.spacefieldAsset = MakkoEngine.staticAsset('spacefield2');
     }
     
     if (!this.spacefieldAsset) return;
@@ -91,9 +91,10 @@ export class BackgroundRenderer {
     const scaleX = display.width / assetWidth;
     const drawWidth = assetWidth * scaleX;
 
-    // Two copies for seamless infinite scroll
+    // Two copies for seamless infinite scroll with 2px overlap to hide seam
+    const overlap = 2;
     display.drawImage(this.spacefieldAsset.image, -scrollX * scaleX, 0, drawWidth, display.height);
-    display.drawImage(this.spacefieldAsset.image, -scrollX * scaleX + drawWidth, 0, drawWidth, display.height);
+    display.drawImage(this.spacefieldAsset.image, -scrollX * scaleX + drawWidth - overlap, 0, drawWidth, display.height);
   }
 
   /** Render procedural starfield */

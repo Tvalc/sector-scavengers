@@ -229,7 +229,9 @@ export class DepthDiveScene implements Scene {
     run.collectedItems = [];
     
     console.log('[DepthDive] Fled! All rewards lost.');
-    this.game.returnToIdle();
+    
+    // End the dive - this handles persisted ship logic and state cleanup
+    this.game.endDepthDive();
   }
 
   update(dt: number): void {

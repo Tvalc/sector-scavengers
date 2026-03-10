@@ -112,7 +112,16 @@ export class IdleScene implements Scene {
     this.background.loadAssets();
     this.boardAsset = loadBoardAsset();
 
-    this.hubSystem.populate();
+    // Get persisted ships (repaired ships that stay on board)
+    const persistedShipIds = this.game.state.persistedShips;
+    
+    // Get owned ship IDs to exclude from board
+    const ownedShipIds = this.game.state.spacecraft
+      .filter(s => s.owner === 'player')
+      .map(s => s.id);
+    
+    // Populate board with persisted ships + new random derelicts
+    this.hubSystem.populate(persistedShipIds, ownedShipIds);
     this.createSpaceshipVisuals();
     
     // Generate available missions if empty

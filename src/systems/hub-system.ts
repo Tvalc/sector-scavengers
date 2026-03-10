@@ -1,7 +1,8 @@
 /**
  * HubSystem
  *
- * Manages the 16-ship hub board, random spaceship population, and player selection state.
+ * Manages the hub showing 5 selectable derelict ships.
+ * The player selects ONE ship per dive - each run is about a single target.
  * The board uses the SSSSBoards2 static image with clickable cell regions.
  */
 
@@ -177,10 +178,15 @@ export class HubSystem {
   /**
    * Populate the board with random spaceships
    * - Clears all existing spaceships and selections
-   * - Randomly picks 4-8 cells to have spaceships
+   * - Always places exactly 5 derelict ships (one ship per run design)
+   * - Prioritizes persisted ships (repaired ships that stay on board)
+   * - Fills remaining slots with new random derelicts
    * - Assigns weighted rarity tiers to each spaceship
+   * 
+   * @param persistedShipIds Array of ship IDs that should stay on board (repaired)
+   * @param ownedShipIds Array of ship IDs that are already owned (exclude from board)
    */
-  populate(): void {
+  populate(persistedShipIds: number[] = [], ownedShipIds: number[] = []): void {
     // Reset all cells
     for (const cell of this._cells) {
       cell.hasSpaceship = false;
@@ -188,18 +194,31 @@ export class HubSystem {
       cell.selected = false;
     }
 
-    // Randomly decide how many spaceships (4-8)
-    this._spaceshipCount = 4 + Math.floor(Math.random() * 5); // 4, 5, 6, 7, or 8
-
-    // Pick random cells to have spaceships
-    const availableCellIds = HUB_CELLS.map((c) => c.id);
+    // Always place exactly 5 derelict ships
+    const targetCount = 5;
     const selectedCellIds: number[] = [];
 
-    for (let i = 0; i < this._spaceshipCount && availableCellIds.length > 0; i++) {
+    // First: Add persisted ships (repaired ships that stay on board)
+    for (const shipId of persistedShipIds) {
+      if (selectedCellIds.length >= targetCount) break;
+      // Only add if not already owned
+      if (!ownedShipIds.includes(shipId) && shipId >= 0 && shipId < this._cells.length) {
+        selectedCellIds.push(shipId);
+      }
+    }
+
+    // Second: Fill remaining slots with new random derelicts
+    const availableCellIds = HUB_CELLS
+      .map((c) => c.id)
+      .filter(id => !selectedCellIds.includes(id) && !ownedShipIds.includes(id));
+
+    while (selectedCellIds.length < targetCount && availableCellIds.length > 0) {
       const randomIndex = Math.floor(Math.random() * availableCellIds.length);
       const cellId = availableCellIds.splice(randomIndex, 1)[0];
       selectedCellIds.push(cellId);
     }
+
+    this._spaceshipCount = selectedCellIds.length;
 
     // Assign rarity to each selected cell
     for (const cellId of selectedCellIds) {
@@ -210,10 +229,11 @@ export class HubSystem {
   }
 
   /**
-   * Toggle selection on a cell
-   * Only works if the cell has a spaceship
-   * @param cellId The cell ID to toggle
-   * @returns True if selection was toggled, false if cell has no spaceship
+   * Select a cell (single-select, one ship per run)
+   * Clears any previous selection and selects only this cell.
+   * Only works if the cell has a spaceship.
+   * @param cellId The cell ID to select
+   * @returns True if selection was made, false if cell has no spaceship
    */
   selectCell(cellId: number): boolean {
     if (cellId < 0 || cellId >= this._cells.length) {
@@ -225,7 +245,11 @@ export class HubSystem {
       return false;
     }
 
-    cell.selected = !cell.selected;
+    // Clear all selections (single-select mode)
+    this.clearSelection();
+    
+    // Select this cell
+    cell.selected = true;
     return true;
   }
 

@@ -7,24 +7,12 @@
  */
 
 import type { Game } from '../game/game';
-import { TacticCard, ALL_CARDS, CardType, getCardByType } from '../types/cards';
-import { RunState, MAX_ROUNDS, MAX_SHIELDS, COLLAPSE_PROBABILITY, EXTRACT_BASE_PAYOUT } from '../types/state';
-import { Spacecraft } from '../types/spacecraft';
+import { TacticCard, ALL_CARDS, CardType } from '../types/cards';
+import { RunState, MAX_ROUNDS, MAX_SHIELDS } from '../types/state';
 import { JuiceSystem } from './juice-system';
 import { SeededRNG } from '../random/seeded-rng';
 import { WeightedPicker } from '../random/weighted-picker';
-import { calculateExtractDropChance } from '../config/economy-config';
-import { CrewRole } from '../types/crew';
-import {
-  hasAssignedEngineer,
-  hasAssignedScavenger,
-  hasAssignedScientist,
-  hasAssignedMedic,
-  getHullRepairMultiplier,
-  getResourceYieldMultiplier,
-  getGlobalCrewEfficiencyBonus,
-  getDiscoveryBonus
-} from './crew-bonus-system';
+import { getDiscoveryBonus } from './crew-bonus-system';
 
 /**
  * Card draft offer (3 cards presented to player)
@@ -155,7 +143,10 @@ export class DepthDiveSystem {
       shields: 0,
       extractedRewards: 0,
       collapsed: false,
-      collectedItems: []
+      collectedItems: [],
+      targetShipId: null,
+      targetRepairedThisRun: false,
+      scrapEarned: 0
     };
     this.sessionStability = 100;
     this.selectedShipId = null;
@@ -303,31 +294,6 @@ export class DepthDiveSystem {
   }
 
   // ============================================================================
-  // Extract
-  // ============================================================================
-
-  /**
-   * Extract from a ship
-   */
-  extract(shipId: number, shipClass: number, multiplier: number): number {
-    const run = this.getRun();
-    if (!run || run.collapsed) return 0;
-
-    const payout = EXTRACT_BASE_PAYOUT * (1 + shipClass) * multiplier;
-    run.extractedRewards += payout;
-    this.game.state.totalExtractions++;
-
-    const ship = this.game.getShip(shipId);
-    if (ship) {
-      const screenX = this.getShipScreenX(ship);
-      this.juice.triggerIonBeam(screenX);
-    }
-
-    console.log(`[DepthDive] Extracted ${payout} from ship ${shipId}`);
-    return payout;
-  }
-
-  // ============================================================================
   // Card Drafting
   // ============================================================================
 
@@ -349,156 +315,14 @@ export class DepthDiveSystem {
 
   /**
    * Play a card
+   * Note: Card execution is handled by TacticCardSystem
+   * This method is kept for compatibility but redirects to TacticCardSystem
    */
   playCard(cardType: CardType): boolean {
-    const run = this.getRun();
-    if (!run || run.collapsed) return false;
-
-    const card = getCardByType(cardType);
-    if (!card) return false;
-
-    if (card.energyCost > 0 && this.game.state.energy < card.energyCost) {
-      return false;
-    }
-
-    if (card.energyCost > 0) {
-      this.game.spendEnergy(card.energyCost);
-    }
-
-    switch (card.type) {
-      case 'SCAN':
-        return this.executeScan();
-      case 'REPAIR':
-        return this.executeRepair();
-      case 'BYPASS':
-        return this.executeBypass();
-      case 'UPGRADE':
-        return this.executeUpgrade();
-      case 'EXTRACT':
-        return this.executeExtract();
-      default:
-        return false;
-    }
-  }
-
-  // ============================================================================
-  // Card Execution
-  // ============================================================================
-
-  private executeScan(): boolean {
-    const neutralShips = this.game.state.spacecraft.filter(s => s.owner === 'neutral');
-    if (neutralShips.length === 0) return false;
-
-    const ship = neutralShips[Math.floor(this.rng.next() * neutralShips.length)];
-    ship.owner = 'player';
-    
-    const stabilityBonus = this.game.getTotalBonus('stability_percent');
-    ship.hullIntegrity = Math.min(100, 100 + stabilityBonus);
-
-    return true;
-  }
-
-  private executeRepair(): boolean {
-    const playerShips = this.game.state.spacecraft.filter(s => s.owner === 'player');
-    if (playerShips.length === 0) return false;
-    
-    const cryoState = this.game.state.cryoState;
-    
-    // Get global medic efficiency bonus (+10% per medic)
-    const medicEfficiencyBonus = getGlobalCrewEfficiencyBonus(cryoState);
-    const efficiencyMultiplier = 1 + medicEfficiencyBonus;
-    
-    for (const ship of playerShips) {
-      // Base repair
-      let repairAmount = 15 + (ship.shipClass * 5);
-      
-      // Apply engineer bonus (+50% if engineer assigned)
-      const repairMultiplier = getHullRepairMultiplier(cryoState, ship.id);
-      repairAmount = Math.floor(repairAmount * repairMultiplier);
-      
-      // Apply medic efficiency bonus (global)
-      repairAmount = Math.floor(repairAmount * efficiencyMultiplier);
-      
-      ship.hullIntegrity = Math.min(100, ship.hullIntegrity + repairAmount);
-    }
-
-    // Log efficiency bonus if active
-    if (medicEfficiencyBonus > 0) {
-      console.log(`[Efficiency] Medic bonus: +${Math.round(medicEfficiencyBonus * 100)}%`);
-    }
-
-    return true;
-  }
-
-  private executeBypass(): boolean {
-    return this.addShield();
-  }
-
-  private executeUpgrade(): boolean {
-    const playerShips = this.game.state.spacecraft.filter(
-      s => s.owner === 'player' && s.shipClass < 3
-    );
-
-    if (playerShips.length === 0) return false;
-
-    const ship = playerShips[Math.floor(this.rng.next() * playerShips.length)];
-    ship.shipClass = Math.min(3, ship.shipClass + 1) as 1 | 2 | 3;
-
-    return true;
-  }
-
-  private executeExtract(): boolean {
-    const run = this.getRun();
-    if (!run) return false;
-
-    const playerShips = this.game.state.spacecraft.filter(s => s.owner === 'player');
-    if (playerShips.length === 0) return false;
-
-    const ship = playerShips[Math.floor(this.rng.next() * playerShips.length)];
-
-    if (this.rng.next() < COLLAPSE_PROBABILITY) {
-      if (run.shields > 0) {
-        run.shields--;
-        this.juice.triggerShake(5, 150);
-      } else {
-        run.collapsed = true;
-        run.extractedRewards = 0;
-        run.collectedItems = [];
-        
-        ship.owner = 'neutral';
-        ship.shipClass = 1;
-        ship.hullIntegrity = 100;
-
-        this.juice.triggerHullBreach();
-        this.game.state.totalCollapses++;
-        
-        return true;
-      }
-    }
-
-    const cryoState = this.game.state.cryoState;
-    
-    // Apply scavenger bonus (+25% resource yield)
-    const scavengerMultiplier = getResourceYieldMultiplier(cryoState, ship.id);
-    
-    // Apply medic efficiency bonus (global)
-    const medicEfficiencyBonus = getGlobalCrewEfficiencyBonus(cryoState);
-    const efficiencyMultiplier = 1 + medicEfficiencyBonus;
-    
-    const viralMultiplier = this.game.getViralMultiplier();
-    const basePayout = EXTRACT_BASE_PAYOUT * (1 + ship.shipClass);
-    const payout = Math.floor(basePayout * viralMultiplier * scavengerMultiplier * efficiencyMultiplier);
-    
-    run.extractedRewards += payout;
-    this.game.state.totalExtractions++;
-
-    // Check for power cell drop
-    this.checkPowerCellDrop(ship);
-
-    const shipScreenX = this.getShipScreenX(ship);
-    this.juice.triggerIonBeam(shipScreenX);
-
-    return true;
+    // Card execution is handled by TacticCardSystem in the scene
+    // This method should not be called directly
+    console.warn('[DepthDiveSystem] playCard should be handled by TacticCardSystem');
+    return false;
   }
 
   // ============================================================================
@@ -552,47 +376,5 @@ export class DepthDiveSystem {
   // ============================================================================
   // Helpers
   // ============================================================================
-
-  /**
-   * Check for power cell drop on successful extraction
-   */
-  private checkPowerCellDrop(ship: Spacecraft): void {
-    // Check if any engineer is assigned to this ship
-    const hasEngineer = this.hasAssignedEngineer(ship.id);
-    const hasScavenger = this.hasAssignedScavenger(ship.id);
-    
-    // Calculate drop chance using EconomyConfig
-    const dropChance = calculateExtractDropChance(ship.shipClass, hasEngineer, hasScavenger);
-    
-    // Roll for power cell drop
-    if (Math.random() < dropChance) {
-      this.game.state.resources.powerCells++;
-      console.log(`[EXTRACT] Power cell found! (Ship class ${ship.shipClass}, ${Math.round(dropChance * 100)}% chance)`);
-    }
-  }
-
-  /**
-   * Check if any engineer is assigned to a specific ship
-   */
-  private hasAssignedEngineer(shipId: number): boolean {
-    if (!this.game.state.cryoState) return false;
-    return hasAssignedEngineer(this.game.state.cryoState, shipId);
-  }
-
-  /**
-   * Check if any scavenger is assigned to a specific ship
-   */
-  private hasAssignedScavenger(shipId: number): boolean {
-    if (!this.game.state.cryoState) return false;
-    return hasAssignedScavenger(this.game.state.cryoState, shipId);
-  }
-
-  private getShipScreenX(ship: Spacecraft): number {
-    const gridWidth = 600;
-    const startX = (1920 - gridWidth) / 2;
-    const cellWidth = gridWidth / 4;
-    
-    return startX + (ship.gridPosition.col * cellWidth) + (cellWidth / 2);
-  }
 }
 

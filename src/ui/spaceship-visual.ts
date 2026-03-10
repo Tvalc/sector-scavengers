@@ -55,42 +55,93 @@ const GLOW_PULSE_SPEED = 0.002; // Radians per millisecond
 interface SpriteConfig {
   characterName: string;
   animationName: string;
+  /** Vertical offset in pixels (negative = up) */
+  yOffset?: number;
+  /** Horizontal offset in pixels (negative = left) */
+  xOffset?: number;
 }
 
-/**
- * Mapping of rarity tiers to their sprite configurations
- * TODO: Add specific sprites for Rare, Epic, Legendary, and Jackpot tiers
- */
-const RARITY_SPRITES: Record<RarityTier, SpriteConfig> = {
-  [RarityTier.Common]: {
+// ============================================================================
+// Per-Tier Sprite Options
+// ============================================================================
+
+/** Common tier options (50/50 random selection) */
+const COMMON_OPTIONS: SpriteConfig[] = [
+  {
     characterName: 'derelictcommon_derelict_common_core',
     animationName: 'derelictcommon_idlerotation_default',
   },
-  [RarityTier.Uncommon]: {
-    characterName: 'Drone_Derelict_UnCommon_Core',
+  {
+    characterName: 'derelictcommon2_derelict_common_core2',
+    animationName: 'derelictcommon2_idle_default',
+    yOffset: -45,
+  },
+];
+
+/** Uncommon tier options (50/50 random selection) */
+const UNCOMMON_OPTIONS: SpriteConfig[] = [
+  {
+    characterName: 'information_drone_derelict_uncommon_core',
     animationName: 'information_drone_docking_default',
+    yOffset: -65,
   },
-  // Placeholder: using Common sprite
-  [RarityTier.Rare]: {
-    characterName: 'derelictcommon_derelict_common_core',
-    animationName: 'derelictcommon_idlerotation_default',
+  {
+    characterName: 'derelictuncommon2_derelict_uncommon_core2',
+    animationName: 'derelictuncommon2_idle_default',
+    yOffset: -50,
+    xOffset: -10,
   },
-  // Placeholder: using Uncommon sprite
-  [RarityTier.Epic]: {
-    characterName: 'Drone_Derelict_UnCommon_Core',
-    animationName: 'information_drone_docking_default',
+];
+
+/** Rare tier options (50/50 random selection) */
+const RARE_OPTIONS: SpriteConfig[] = [
+  {
+    characterName: 'derelict_military_fighter_rare_militaryfighterrare',
+    animationName: 'derelict_military_fighter_rare_idle_default',
+    yOffset: -40,
   },
-  // Placeholder: using Common sprite
-  [RarityTier.Legendary]: {
-    characterName: 'derelictcommon_derelict_common_core',
-    animationName: 'derelictcommon_idlerotation_default',
+  {
+    characterName: 'derelict_shipping_freighter_rare_rarefrieghtercore',
+    animationName: 'derelict_shipping_freighter_rare_idle_default',
+    yOffset: -40,
   },
-  // Placeholder: using Uncommon sprite
-  [RarityTier.Jackpot]: {
-    characterName: 'Drone_Derelict_UnCommon_Core',
-    animationName: 'information_drone_docking_default',
-  },
+];
+
+/** Epic tier (single option) */
+const EPIC_OPTION: SpriteConfig = {
+  characterName: 'derelict_military_fighter_epic_militaryfighterepic',
+  animationName: 'derelict_military_fighter_epic_idle_default',
+  yOffset: -55,
 };
+
+/** Legendary tier (single option) */
+const LEGENDARY_OPTION: SpriteConfig = {
+  characterName: 'derelictrare3_derelictstationlegendary',
+  animationName: 'derelictrare3_idle_default',
+  yOffset: -75,
+};
+
+/**
+ * Resolve sprite configuration for a given rarity tier.
+ * For tiers with multiple options, randomly selects one with 50/50 probability.
+ */
+function resolveSpriteConfig(rarity: RarityTier): SpriteConfig {
+  switch (rarity) {
+    case RarityTier.Common:
+      return COMMON_OPTIONS[Math.random() < 0.5 ? 0 : 1];
+    case RarityTier.Uncommon:
+      return UNCOMMON_OPTIONS[Math.random() < 0.5 ? 0 : 1];
+    case RarityTier.Rare:
+      return RARE_OPTIONS[Math.random() < 0.5 ? 0 : 1];
+    case RarityTier.Epic:
+      return EPIC_OPTION;
+    case RarityTier.Legendary:
+      return LEGENDARY_OPTION;
+    case RarityTier.Jackpot:
+      // Placeholder: uses Legendary sprite
+      return LEGENDARY_OPTION;
+  }
+}
 
 // ============================================================================
 // SpaceshipVisual Class
@@ -114,6 +165,9 @@ export class SpaceshipVisual {
 
   /** Animated character instance */
   private character: ICharacter | null = null;
+
+  /** Sprite configuration for this instance */
+  private spriteConfig: SpriteConfig | null = null;
 
   /** Whether sprite was successfully loaded */
   private loaded: boolean = false;
@@ -188,11 +242,11 @@ export class SpaceshipVisual {
    */
   private initCharacter(): void {
     try {
-      const spriteConfig = RARITY_SPRITES[this.rarity];
-      this.character = MakkoEngine.sprite(spriteConfig.characterName);
+      this.spriteConfig = resolveSpriteConfig(this.rarity);
+      this.character = MakkoEngine.sprite(this.spriteConfig.characterName);
 
       if (this.character && this.character.isLoaded()) {
-        this.character.play(spriteConfig.animationName, true);
+        this.character.play(this.spriteConfig.animationName, true);
         this.loaded = true;
       } else {
         this.character = null;
@@ -261,6 +315,12 @@ export class SpaceshipVisual {
       drawY = this.y - hitboxCenterOffsetY * scale;
     }
     
+    // Apply per-sprite offsets
+    const yOffset = this.spriteConfig?.yOffset ?? 0;
+    const xOffset = this.spriteConfig?.xOffset ?? 0;
+    drawY += yOffset * scale;
+    drawX += xOffset * scale;
+    
     this.character.draw(display, drawX, drawY, {
       scale: scale,
       flipH: false,
@@ -287,7 +347,7 @@ export class SpaceshipVisual {
         lineWidth: 2
       });
       
-      // If we have hitbox data, show where the sprite bounds actually are
+      // Show hitbox bounds visualization
       if (hitbox) {
         const scaledWidth = hitbox.width * scale;
         const scaledHeight = hitbox.height * scale;

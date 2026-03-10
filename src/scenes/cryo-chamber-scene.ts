@@ -22,7 +22,7 @@ const SCROLL_SPEED = 1;
 /**
  * Spacefield asset dimensions
  */
-const SPACEFIELD_WIDTH = 1620;
+const SPACEFIELD_WIDTH = 1920;
 const SPACEFIELD_HEIGHT = 1080;
 
 /**
@@ -52,13 +52,13 @@ export class CryoChamberScene implements Scene {
     // Check if assets are loaded
     // Using cryochambernew (1920x1080) instead of cryochambernews (1350x1080) for proper aspect ratio
     this.cryoChamberLoaded = MakkoEngine.hasStaticAsset('cryochambernew');
-    this.spacefieldLoaded = MakkoEngine.hasStaticAsset('spacefield');
+    this.spacefieldLoaded = MakkoEngine.hasStaticAsset('spacefield2');
 
     if (!this.cryoChamberLoaded) {
       console.warn('[CryoChamberScene] Cryo chamber asset cryochambernew not loaded');
     }
     if (!this.spacefieldLoaded) {
-      console.warn('[CryoChamberScene] Spacefield asset not loaded');
+      console.warn('[CryoChamberScene] Spacefield2 asset not loaded');
     }
   }
 
@@ -109,7 +109,7 @@ export class CryoChamberScene implements Scene {
 
     // Get assets (using 1920x1080 version for proper aspect ratio)
     const cryoChamber = MakkoEngine.staticAsset('cryochambernew');
-    const spacefield = MakkoEngine.staticAsset('spacefield');
+    const spacefield = MakkoEngine.staticAsset('spacefield2');
 
     if (!cryoChamber || !spacefield) {
       // Fallback rendering if assets not loaded

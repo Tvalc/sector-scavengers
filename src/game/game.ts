@@ -24,6 +24,7 @@ import { Resources } from '../types/resources';
 import { SaveManager } from '../save/save-manager';
 import { CryoState } from '../systems/cryo-system';
 import { Mission } from '../types/mission';
+import { CrewMember } from '../types/crew';
 
 /**
  * Game flow states
@@ -52,12 +53,19 @@ interface SectorScavengersSave {
   tutorialSeen: boolean;
   tutorialSkipped: boolean;
   hubSelectedShips: number[];
+  persistedShips: number[];
   resources: Resources;
   cryoState: CryoState;
   availableCryoPods: number;
   activeMissions: Mission[];
   availableMissions: Mission[];
   completedMissionCount: number;
+  deathCurrency: number;
+  deckUnlockProgress: number;
+  nextUnlockCardId: string | null;
+  unlockedCards: string[];
+  crewRoster: CrewMember[];
+  crewAssignments: Record<number, string>;
 }
 
 /**
@@ -221,23 +229,56 @@ export class Game {
 
   /**
    * Start a Depth Dive session
+   * Uses the first selected hub ship as the target for this run.
    */
   startDepthDive(): void {
     if (this.state.currentRun) {
       console.warn('[Game] Already in a Depth Dive session');
       return;
     }
+    
     this.stateMachine.transition(GameFlowStates.DEPTH_DIVE, this);
+    
+    // Store the selected ship as the run target (one ship per run)
+    if (this.state.currentRun && this.state.hubSelectedShips.length > 0) {
+      this.state.currentRun.targetShipId = this.state.hubSelectedShips[0];
+      console.log(`[Game] Starting dive with target ship ${this.state.currentRun.targetShipId}`);
+    }
   }
 
   /**
    * End the Depth Dive and show results
+   * Handles persisted ship logic:
+   * - If target was repaired: keep in persistedShips
+   * - If target was not repaired: remove from persistedShips (board will reset)
    */
   endDepthDive(): void {
     if (!this.state.currentRun) {
       console.warn('[Game] No active Depth Dive session');
       return;
     }
+    
+    const run = this.state.currentRun;
+    const targetId = run.targetShipId;
+    
+    // Handle persisted ship logic
+    if (targetId !== null) {
+      if (run.targetRepairedThisRun) {
+        // Ship was repaired - add to persisted ships if not already there
+        if (!this.state.persistedShips.includes(targetId)) {
+          this.state.persistedShips.push(targetId);
+          console.log(`[Game] Ship ${targetId} repaired and will persist on board`);
+        }
+      } else {
+        // Ship was not repaired - remove from persisted ships
+        const index = this.state.persistedShips.indexOf(targetId);
+        if (index !== -1) {
+          this.state.persistedShips.splice(index, 1);
+          console.log(`[Game] Ship ${targetId} not repaired, removing from board`);
+        }
+      }
+    }
+    
     // Clear hub selection after dive ends
     this.clearHubSelectedShips();
     this.stateMachine.transition(GameFlowStates.RESULTS, this);
@@ -245,6 +286,7 @@ export class Game {
 
   /**
    * Return to idle state from results
+   * Note: Run state is cleared by RESULTS state exit handler.
    */
   returnToIdle(): void {
     this.stateMachine.transition(GameFlowStates.IDLE, this);
@@ -396,6 +438,20 @@ export class Game {
   }
 
   // ============================================================================
+  // Hub System Access (for IdleScene)
+  // ============================================================================
+
+  /**
+   * Get the hub system (used by IdleScene)
+   * Note: This is a temporary accessor - the HubSystem instance
+   * is created and managed by IdleScene.
+   */
+  getHubSystem(): import('../systems/hub-system').HubSystem | undefined {
+    // Return undefined - IdleScene creates its own HubSystem instance
+    // This accessor is for future use if needed
+    return undefined;
+  }
+  // ============================================================================
   // Persistence
   // ============================================================================
 
@@ -415,12 +471,19 @@ export class Game {
       tutorialSeen: this.state.tutorialSeen,
       tutorialSkipped: this.state.tutorialSkipped ?? false,
       hubSelectedShips: this.state.hubSelectedShips,
+      persistedShips: this.state.persistedShips,
       resources: this.state.resources,
       cryoState: this.state.cryoState,
       availableCryoPods: this.state.availableCryoPods,
       activeMissions: this.state.activeMissions,
       availableMissions: this.state.availableMissions,
-      completedMissionCount: this.state.completedMissionCount
+      completedMissionCount: this.state.completedMissionCount,
+      deathCurrency: this.state.deathCurrency,
+      deckUnlockProgress: this.state.deckUnlockProgress,
+      nextUnlockCardId: this.state.nextUnlockCardId,
+      unlockedCards: this.state.unlockedCards,
+      crewRoster: this.state.crewRoster,
+      crewAssignments: this.state.crewAssignments
     });
   }
 
@@ -441,6 +504,7 @@ export class Game {
       this.state.tutorialSeen = saveData.tutorialSeen ?? false;
       this.state.tutorialSkipped = saveData.tutorialSkipped ?? false;
       this.state.hubSelectedShips = saveData.hubSelectedShips ?? [];
+      this.state.persistedShips = saveData.persistedShips ?? [];
       
       // Array/object values - validate before assigning to prevent undefined overwrites
       if (saveData.spacecraft && Array.isArray(saveData.spacecraft)) {
@@ -483,6 +547,16 @@ export class Game {
       if (typeof saveData.completedMissionCount === 'number') {
         this.state.completedMissionCount = saveData.completedMissionCount;
       }
+      
+      // Meta progression
+      this.state.deathCurrency = saveData.deathCurrency ?? 0;
+      this.state.deckUnlockProgress = saveData.deckUnlockProgress ?? 0;
+      this.state.nextUnlockCardId = saveData.nextUnlockCardId ?? null;
+      this.state.unlockedCards = saveData.unlockedCards ?? [];
+      
+      // Crew progression
+      this.state.crewRoster = saveData.crewRoster ?? [];
+      this.state.crewAssignments = saveData.crewAssignments ?? {};
       
       // Check viral multiplier expiry on load
       this.updateViralMultiplier();

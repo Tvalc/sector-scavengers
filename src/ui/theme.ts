@@ -37,13 +37,12 @@ export const COLORS = {
 /**
  * Card type to color mapping
  * Maps tactic card types to their corresponding accent colors
+ * Simplified to three core actions: Scavenge (risk), Repair (persist), Extract (safe)
  */
 export const CARD_COLORS = {
-  SCAN: COLORS.neonCyan,
-  REPAIR: COLORS.successGreen,
-  BYPASS: COLORS.warningYellow,
-  UPGRADE: COLORS.neonMagenta,
-  EXTRACT: COLORS.warningRed,
+  SCAVENGE: COLORS.warningYellow,  // Risk/reward - caution
+  REPAIR: COLORS.successGreen,      // Persistence - positive
+  EXTRACT: COLORS.neonCyan,         // Safe exit - neutral/safe
 } as const;
 
 /**

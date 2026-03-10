@@ -475,23 +475,23 @@
       "animations": {
         "derelictcommon_idlerotation_default": {
           "fps": 24,
-          "json": "https://api.makko.ai/storage/v1/object/public/sprite-sheets/ec8388e4-636e-4a3d-a34f-35b8f3d550c8/derelictcommon_idlerotation_default.json?t=1773168373442",
-          "image": "https://api.makko.ai/storage/v1/object/public/sprite-sheets/ec8388e4-636e-4a3d-a34f-35b8f3d550c8/derelictcommon_idlerotation_default.webp?t=1773168373442",
+          "json": "https://api.makko.ai/storage/v1/object/public/sprite-sheets/ec8388e4-636e-4a3d-a34f-35b8f3d550c8/derelictcommon_idlerotation_default.json?t=1773171474821",
+          "image": "https://api.makko.ai/storage/v1/object/public/sprite-sheets/ec8388e4-636e-4a3d-a34f-35b8f3d550c8/derelictcommon_idlerotation_default.webp?t=1773171474821",
           "priority": "medium",
           "frameCount": 96,
           "spriteSheetId": "c97be7b0-200e-408a-b41b-d913675e3877",
           "animationLength": 4,
           "metadata": {
             "anchor": {
-              "x": 240,
-              "y": 298,
+              "x": 245,
+              "y": 313,
               "strategy": "manual",
               "normalized": {
-                "x": 0.5194805194805194,
-                "y": 0.952076677316294
+                "x": 0.5303030303030303,
+                "y": 1
               }
             },
-            "scale": 1,
+            "scale": 0.8,
             "dimensions": {
               "width": 462,
               "height": 313
@@ -507,13 +507,23 @@
       "animations": {
         "information_drone_docking_default": {
           "fps": 24,
-          "json": "https://api.makko.ai/storage/v1/object/public/sprite-sheets/70bffe37-916d-443b-9cd1-e81a744c9b71/information_drone_docking_default.json?t=1773168372629",
-          "image": "https://api.makko.ai/storage/v1/object/public/sprite-sheets/70bffe37-916d-443b-9cd1-e81a744c9b71/information_drone_docking_default.webp?t=1773168372629",
+          "json": "https://api.makko.ai/storage/v1/object/public/sprite-sheets/70bffe37-916d-443b-9cd1-e81a744c9b71/information_drone_docking_default.json?t=1773171392944",
+          "image": "https://api.makko.ai/storage/v1/object/public/sprite-sheets/70bffe37-916d-443b-9cd1-e81a744c9b71/information_drone_docking_default.webp?t=1773171392944",
           "priority": "medium",
           "frameCount": 48,
           "spriteSheetId": "46f624dc-815f-4b50-bcdc-a1d560961f34",
           "animationLength": 2,
           "metadata": {
+            "anchor": {
+              "x": 152,
+              "y": 458,
+              "strategy": "manual",
+              "normalized": {
+                "x": 0.4648318042813456,
+                "y": 0.916
+              }
+            },
+            "scale": 0.5,
             "dimensions": {
               "width": 327,
               "height": 500
@@ -529,23 +539,23 @@
       "animations": {
         "derelictrare3_idle_default": {
           "fps": 24,
-          "json": "https://api.makko.ai/storage/v1/object/public/sprite-sheets/7525e7f9-017c-4058-95a1-ae199280fd24/derelictrare3_idle_default.json?t=1773168362361",
-          "image": "https://api.makko.ai/storage/v1/object/public/sprite-sheets/7525e7f9-017c-4058-95a1-ae199280fd24/derelictrare3_idle_default.webp?t=1773168362361",
+          "json": "https://api.makko.ai/storage/v1/object/public/sprite-sheets/7525e7f9-017c-4058-95a1-ae199280fd24/derelictrare3_idle_default.json?t=1773171394122",
+          "image": "https://api.makko.ai/storage/v1/object/public/sprite-sheets/7525e7f9-017c-4058-95a1-ae199280fd24/derelictrare3_idle_default.webp?t=1773171394122",
           "priority": "medium",
           "frameCount": 48,
           "spriteSheetId": "7674dfab-494a-4204-b9c7-a4de29703586",
           "animationLength": 2,
           "metadata": {
             "anchor": {
-              "x": 670,
+              "x": 665.0000000000001,
               "y": 584,
               "strategy": "manual",
               "normalized": {
-                "x": 0.700836820083682,
+                "x": 0.6956066945606696,
                 "y": 1
               }
             },
-            "scale": 0.4,
+            "scale": 0.6,
             "dimensions": {
               "width": 956,
               "height": 584
@@ -561,23 +571,23 @@
       "animations": {
         "derelictuncommon2_idle_default": {
           "fps": 24,
-          "json": "https://api.makko.ai/storage/v1/object/public/sprite-sheets/691a98f6-0376-409f-b82b-2c06d9c1a0dc/derelictuncommon2_idle_default.json?t=1773168365896",
-          "image": "https://api.makko.ai/storage/v1/object/public/sprite-sheets/691a98f6-0376-409f-b82b-2c06d9c1a0dc/derelictuncommon2_idle_default.webp?t=1773168365896",
+          "json": "https://api.makko.ai/storage/v1/object/public/sprite-sheets/691a98f6-0376-409f-b82b-2c06d9c1a0dc/derelictuncommon2_idle_default.json?t=1773171266638",
+          "image": "https://api.makko.ai/storage/v1/object/public/sprite-sheets/691a98f6-0376-409f-b82b-2c06d9c1a0dc/derelictuncommon2_idle_default.webp?t=1773171266638",
           "priority": "medium",
           "frameCount": 39,
           "spriteSheetId": "3867e0f5-bf6b-4137-aac8-17377199cc3f",
           "animationLength": 1.625,
           "metadata": {
             "anchor": {
-              "x": 234,
-              "y": 369,
+              "x": 234.5,
+              "y": 399,
               "strategy": "manual",
               "normalized": {
-                "x": 0.4978723404255319,
-                "y": 0.924812030075188
+                "x": 0.498936170212766,
+                "y": 1
               }
             },
-            "scale": 1,
+            "scale": 0.5,
             "dimensions": {
               "width": 470,
               "height": 399
@@ -593,23 +603,23 @@
       "animations": {
         "derelictcommon2_idle_default": {
           "fps": 24,
-          "json": "https://api.makko.ai/storage/v1/object/public/sprite-sheets/c61fbfa3-e144-4dec-b865-70d6da57cb41/derelictcommon2_idle_default.json?t=1773168366881",
-          "image": "https://api.makko.ai/storage/v1/object/public/sprite-sheets/c61fbfa3-e144-4dec-b865-70d6da57cb41/derelictcommon2_idle_default.webp?t=1773168366881",
+          "json": "https://api.makko.ai/storage/v1/object/public/sprite-sheets/c61fbfa3-e144-4dec-b865-70d6da57cb41/derelictcommon2_idle_default.json?t=1773171129669",
+          "image": "https://api.makko.ai/storage/v1/object/public/sprite-sheets/c61fbfa3-e144-4dec-b865-70d6da57cb41/derelictcommon2_idle_default.webp?t=1773171129669",
           "priority": "medium",
           "frameCount": 86,
           "spriteSheetId": "95c02cb0-8b48-46cc-a980-f2452358de0c",
           "animationLength": 3.5833333333333335,
           "metadata": {
             "anchor": {
-              "x": 229,
-              "y": 366,
+              "x": 232,
+              "y": 402,
               "strategy": "manual",
               "normalized": {
-                "x": 0.475103734439834,
-                "y": 0.8299319727891157
+                "x": 0.48132780082987553,
+                "y": 0.9115646258503401
               }
             },
-            "scale": 1,
+            "scale": 0.8,
             "dimensions": {
               "width": 482,
               "height": 441
@@ -687,8 +697,8 @@
       "animations": {
         "derelict_military_fighter_rare_idle_default": {
           "fps": 24,
-          "json": "https://api.makko.ai/storage/v1/object/public/sprite-sheets/01954414-31ad-48e0-9617-d91eb176f88c/derelict_military_fighter_rare_idle_default.json?t=1773168369781",
-          "image": "https://api.makko.ai/storage/v1/object/public/sprite-sheets/01954414-31ad-48e0-9617-d91eb176f88c/derelict_military_fighter_rare_idle_default.webp?t=1773168369781",
+          "json": "https://api.makko.ai/storage/v1/object/public/sprite-sheets/01954414-31ad-48e0-9617-d91eb176f88c/derelict_military_fighter_rare_idle_default.json?t=1773171087743",
+          "image": "https://api.makko.ai/storage/v1/object/public/sprite-sheets/01954414-31ad-48e0-9617-d91eb176f88c/derelict_military_fighter_rare_idle_default.webp?t=1773171087743",
           "priority": "medium",
           "frameCount": 44,
           "spriteSheetId": "535a1205-50f9-466a-b230-797192d63fdd",
@@ -696,14 +706,14 @@
           "metadata": {
             "anchor": {
               "x": 241,
-              "y": 371,
+              "y": 391,
               "strategy": "manual",
               "normalized": {
                 "x": 0.5127659574468085,
-                "y": 0.9440203562340967
+                "y": 0.9949109414758269
               }
             },
-            "scale": 1,
+            "scale": 0.8,
             "dimensions": {
               "width": 470,
               "height": 393
@@ -719,23 +729,23 @@
       "animations": {
         "derelict_military_fighter_epic_idle_default": {
           "fps": 24,
-          "json": "https://api.makko.ai/storage/v1/object/public/sprite-sheets/633f59d8-163b-4e8d-a8b0-9e24cf834d68/derelict_military_fighter_epic_idle_default.json?t=1773168370326",
-          "image": "https://api.makko.ai/storage/v1/object/public/sprite-sheets/633f59d8-163b-4e8d-a8b0-9e24cf834d68/derelict_military_fighter_epic_idle_default.webp?t=1773168370326",
+          "json": "https://api.makko.ai/storage/v1/object/public/sprite-sheets/633f59d8-163b-4e8d-a8b0-9e24cf834d68/derelict_military_fighter_epic_idle_default.json?t=1773171089072",
+          "image": "https://api.makko.ai/storage/v1/object/public/sprite-sheets/633f59d8-163b-4e8d-a8b0-9e24cf834d68/derelict_military_fighter_epic_idle_default.webp?t=1773171089072",
           "priority": "medium",
           "frameCount": 96,
           "spriteSheetId": "438c4857-9b7c-4920-9346-3ebc493c1ba2",
           "animationLength": 4,
           "metadata": {
             "anchor": {
-              "x": 266,
-              "y": 293,
+              "x": 267,
+              "y": 329,
               "strategy": "manual",
               "normalized": {
-                "x": 0.5215686274509804,
-                "y": 0.6894117647058824
+                "x": 0.5235294117647059,
+                "y": 0.7741176470588236
               }
             },
-            "scale": 1,
+            "scale": 0.8,
             "dimensions": {
               "width": 510,
               "height": 425
@@ -751,13 +761,23 @@
       "animations": {
         "derelict_shipping_freighter_rare_idle_default": {
           "fps": 24,
-          "json": "https://api.makko.ai/storage/v1/object/public/sprite-sheets/3ec95e3c-c34a-4786-84cb-d71f72df412b/derelict_shipping_freighter_rare_idle_default.json?t=1773168371865",
-          "image": "https://api.makko.ai/storage/v1/object/public/sprite-sheets/3ec95e3c-c34a-4786-84cb-d71f72df412b/derelict_shipping_freighter_rare_idle_default.webp?t=1773168371865",
+          "json": "https://api.makko.ai/storage/v1/object/public/sprite-sheets/3ec95e3c-c34a-4786-84cb-d71f72df412b/derelict_shipping_freighter_rare_idle_default.json?t=1773171393435",
+          "image": "https://api.makko.ai/storage/v1/object/public/sprite-sheets/3ec95e3c-c34a-4786-84cb-d71f72df412b/derelict_shipping_freighter_rare_idle_default.webp?t=1773171393435",
           "priority": "medium",
           "frameCount": 48,
           "spriteSheetId": "76a52a4a-ab8b-4881-b526-13327ea897e1",
           "animationLength": 2,
           "metadata": {
+            "anchor": {
+              "x": 179,
+              "y": 431,
+              "strategy": "manual",
+              "normalized": {
+                "x": 0.504225352112676,
+                "y": 0.805607476635514
+              }
+            },
+            "scale": 0.8,
             "dimensions": {
               "width": 355,
               "height": 535
