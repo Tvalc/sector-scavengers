@@ -1,12 +1,12 @@
 /**
  * SpaceshipVisual
  *
- * Visual component for rendering animated spaceship sprites with rarity-colored glows.
+ * Visual component for rendering animated spaceship sprites.
  * Used in the hub board to display populated cells.
  */
 
 import { MakkoEngine, ICharacter, IDisplay } from '@makko/engine';
-import { RarityTier, getTierColors } from '../prizes/prize-types';
+import { RarityTier } from '../prizes/prize-types';
 
 // ============================================================================
 // Types
@@ -20,39 +20,13 @@ export interface SpaceshipRenderOptions {
   selected?: boolean;
   /** Scale override (uses instance scale if not provided) */
   scale?: number;
-  /** Show debug visualization (anchor, hitbox) */
+  /** Show debug visualization */
   debug?: boolean;
-}
-
-/**
- * Rarity color configuration for glow effects
- */
-interface RarityColorConfig {
-  /** Glow color (CSS color string) */
-  color: string;
-  /** Glow alpha/transparency */
-  alpha: number;
 }
 
 // ============================================================================
 // Constants
 // ============================================================================
-
-/**
- * Rarity glow colors with tier-specific alphas
- * Higher rarities get more prominent glows
- */
-export const RARITY_COLORS: Record<RarityTier, RarityColorConfig> = {
-  [RarityTier.Common]: { color: '#888888', alpha: 0.15 },
-  [RarityTier.Uncommon]: { color: '#1eff00', alpha: 0.25 },
-  [RarityTier.Rare]: { color: '#0070dd', alpha: 0.35 },
-  [RarityTier.Epic]: { color: '#a335ee', alpha: 0.45 },
-  [RarityTier.Legendary]: { color: '#ff8000', alpha: 0.55 },
-  [RarityTier.Jackpot]: { color: '#e6cc80', alpha: 0.65 },
-};
-
-/** Base glow circle radius in pixels */
-const GLOW_RADIUS = 80;
 
 /** Selection ring radius in pixels */
 const SELECTION_RADIUS = 90;
@@ -77,16 +51,16 @@ const ANIMATION_NAME = 'derelictcommon_idlerotation_default';
 // ============================================================================
 
 /**
- * Visual component for rendering an animated spaceship with rarity glow
+ * Visual component for rendering an animated spaceship
  */
 export class SpaceshipVisual {
-  /** X position in screen coordinates */
+  /** X position in game coordinates (where we want the ship centered) */
   readonly x: number;
 
-  /** Y position in screen coordinates */
+  /** Y position in game coordinates (where we want the ship centered) */
   readonly y: number;
 
-  /** Rarity tier for glow color */
+  /** Rarity tier */
   readonly rarity: RarityTier;
 
   /** Scale multiplier */
@@ -100,9 +74,9 @@ export class SpaceshipVisual {
 
   /**
    * Create a new spaceship visual
-   * @param x Center X position
-   * @param y Center Y position
-   * @param rarity Rarity tier for glow color
+   * @param x Center X position (where ship should appear)
+   * @param y Center Y position (where ship should appear)
+   * @param rarity Rarity tier
    * @param scale Scale multiplier (default 1.0)
    */
   constructor(x: number, y: number, rarity: RarityTier, scale: number = 1.0) {
@@ -130,7 +104,7 @@ export class SpaceshipVisual {
   }
 
   /**
-   * Render the spaceship with glow and optional selection ring
+   * Render the spaceship with optional selection ring
    * @param display MakkoEngine display instance
    * @param options Render options
    */
@@ -170,15 +144,12 @@ export class SpaceshipVisual {
         this.character.play(ANIMATION_NAME, true);
         this.loaded = true;
         
-        // Debug: Log character info
-        console.log('[SpaceshipVisual] Character loaded:', SPRITE_CHARACTER);
-        console.log('[SpaceshipVisual] Target position:', this.x, this.y);
+        // Debug: Log character info once
         const hitbox = this.character.getHitbox();
         if (hitbox) {
-          console.log('[SpaceshipVisual] Hitbox:', JSON.stringify(hitbox));
+          console.log(`[SpaceshipVisual] Hitbox for ${SPRITE_CHARACTER}:`, hitbox);
         }
       } else {
-        // Character not available yet
         this.character = null;
         this.loaded = false;
       }
@@ -186,19 +157,6 @@ export class SpaceshipVisual {
       this.character = null;
       this.loaded = false;
     }
-  }
-
-  /**
-   * Draw the rarity glow circle
-   */
-  private drawGlow(display: IDisplay, scale: number): void {
-    const config = RARITY_COLORS[this.rarity];
-    const radius = GLOW_RADIUS * scale;
-
-    display.drawCircle(this.x, this.y, radius, {
-      fill: config.color,
-      alpha: config.alpha,
-    });
   }
 
   /**
@@ -215,83 +173,62 @@ export class SpaceshipVisual {
   }
 
   /**
-   * Draw the spaceship sprite
+   * Draw the spaceship sprite centered on target position
    */
-  private drawSprite(display: IDisplay, scale: number, debug: boolean = false): void {
+  private drawSprite(display: IDisplay, scale: number, debug: boolean): void {
     if (!this.character || !this.loaded) {
       return;
     }
 
-    // Get hitbox to calculate proper centering
-    const hitbox = this.character.getHitbox();
+    // Get the current frame size to center properly
+    const frameSize = this.character.getCurrentFrameSize();
     
-    if (hitbox) {
-      // Calculate the offset needed to center the sprite's visual on our target position
-      // hitbox.x/y are the offset from anchor to top-left of bounding box
-      // We want the CENTER of the hitbox to be at (this.x, this.y)
-      const centerX = this.x - (hitbox.x + hitbox.width / 2) * scale;
-      const centerY = this.y - (hitbox.y + hitbox.height / 2) * scale;
-      
-      this.character.draw(display, centerX, centerY, {
-        scale: scale,
-        flipH: false,
-        flipV: false,
-        alpha: debug ? 0.7 : 1.0,  // Slightly transparent in debug mode
-      });
+    // The character draws from its anchor point
+    // For this sprite, we want to center it on (this.x, this.y)
+    // So we need to offset by half the frame size
+    const drawX = this.x - frameSize.width * scale / 2;
+    const drawY = this.y - frameSize.height * scale / 2;
 
-      if (debug) {
-        // Draw where we're ACTUALLY drawing the character - WHITE X
-        display.drawLine(centerX - 15, centerY - 15, centerX + 15, centerY + 15, {
-          stroke: '#ffffff',
-          lineWidth: 3
-        });
-        display.drawLine(centerX + 15, centerY - 15, centerX - 15, centerY + 15, {
-          stroke: '#ffffff',
-          lineWidth: 3
-        });
-        
-        // Draw target position (node center) - CYAN circle
-        display.drawCircle(this.x, this.y, 20, {
-          stroke: '#00ffff',
-          lineWidth: 3,
-          alpha: 1.0
-        });
-        
-        // Draw hitbox at the adjusted position - YELLOW
-        const hbX = centerX + hitbox.x * scale;
-        const hbY = centerY + hitbox.y * scale;
-        const hbW = hitbox.width * scale;
-        const hbH = hitbox.height * scale;
-        
-        display.drawRect(hbX, hbY, hbW, hbH, {
-          stroke: '#ffff00',
-          lineWidth: 2,
-          alpha: 0.8
-        });
-        
-        // Draw hitbox center - GREEN (should overlap with CYAN target)
-        const hbCenterX = hbX + hbW / 2;
-        const hbCenterY = hbY + hbH / 2;
-        display.drawCircle(hbCenterX, hbCenterY, 6, {
-          fill: '#00ff00',
-          alpha: 1.0
-        });
-        
-        // Text label showing position info
-        display.drawText(`Target:(${Math.round(this.x)},${Math.round(this.y)}) Draw:(${Math.round(centerX)},${Math.round(centerY)})`, 
-          this.x, this.y + 50, {
-          font: '12px monospace',
-          fill: '#ffffff',
-          align: 'center'
-        });
-      }
-    } else {
-      // No hitbox, just draw at target
-      this.character.draw(display, this.x, this.y, {
-        scale: scale,
-        flipH: false,
-        flipV: false,
-        alpha: 1.0,
+    // Draw the sprite
+    this.character.draw(display, drawX, drawY, {
+      scale: scale,
+      flipH: false,
+      flipV: false,
+      alpha: debug ? 0.7 : 1.0,
+    });
+
+    // Debug visualization
+    if (debug) {
+      // Target position (CYAN circle) - where we WANT the ship
+      display.drawCircle(this.x, this.y, 20, {
+        stroke: '#00ffff',
+        lineWidth: 3,
+        alpha: 1.0
+      });
+      
+      // Draw position (WHITE X) - where we're drawing the anchor
+      display.drawLine(drawX - 15, drawY - 15, drawX + 15, drawY + 15, {
+        stroke: '#ffffff',
+        lineWidth: 2
+      });
+      display.drawLine(drawX + 15, drawY - 15, drawX - 15, drawY + 15, {
+        stroke: '#ffffff',
+        lineWidth: 2
+      });
+      
+      // Frame bounds (YELLOW rectangle)
+      display.drawRect(drawX, drawY, frameSize.width * scale, frameSize.height * scale, {
+        stroke: '#ffff00',
+        lineWidth: 2,
+        alpha: 0.8
+      });
+      
+      // Frame center (GREEN dot) - should overlap with CYAN target
+      const frameCenterX = drawX + (frameSize.width * scale) / 2;
+      const frameCenterY = drawY + (frameSize.height * scale) / 2;
+      display.drawCircle(frameCenterX, frameCenterY, 6, {
+        fill: '#00ff00',
+        alpha: 1.0
       });
     }
   }
