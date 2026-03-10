@@ -180,53 +180,50 @@ export class SpaceshipVisual {
       return;
     }
 
-    // Get the current frame size to center properly
     const frameSize = this.character.getCurrentFrameSize();
     
-    // The character draws from its anchor point
-    // For this sprite, we want to center it on (this.x, this.y)
-    // So we need to offset by half the frame size
-    const drawX = this.x - frameSize.width * scale / 2;
-    const drawY = this.y - frameSize.height * scale / 2;
-
-    // Draw the sprite
-    this.character.draw(display, drawX, drawY, {
+    // MakkoEngine uses bottom-center anchor: (x, y) = bottom-center of sprite
+    // Offset Y by half the sprite height so the CENTER of the sprite lands at (this.x, this.y)
+    const drawY = this.y + (frameSize.height * scale) / 2;
+    this.character.draw(display, this.x, drawY, {
       scale: scale,
       flipH: false,
       flipV: false,
       alpha: debug ? 0.7 : 1.0,
     });
 
+    // Debug hitbox rectangle (centered on where sprite is actually drawn)
+    const hitboxDrawX = this.x - (frameSize.width * scale) / 2;
+    const hitboxDrawY = drawY - (frameSize.height * scale);
+
     // Debug visualization
     if (debug) {
-      // Target position (CYAN circle) - where we WANT the ship
+      // Target position (CYAN circle) - where we pass to sprite.draw
       display.drawCircle(this.x, this.y, 20, {
         stroke: '#00ffff',
         lineWidth: 3,
         alpha: 1.0
       });
       
-      // Draw position (WHITE X) - where we're drawing the anchor
-      display.drawLine(drawX - 15, drawY - 15, drawX + 15, drawY + 15, {
+      // Draw position (WHITE X) - sprite anchor (bottom-center at this.x, this.y)
+      display.drawLine(this.x - 15, this.y - 15, this.x + 15, this.y + 15, {
         stroke: '#ffffff',
         lineWidth: 2
       });
-      display.drawLine(drawX + 15, drawY - 15, drawX - 15, drawY + 15, {
+      display.drawLine(this.x + 15, this.y - 15, this.x - 15, this.y + 15, {
         stroke: '#ffffff',
         lineWidth: 2
       });
       
       // Frame bounds (YELLOW rectangle)
-      display.drawRect(drawX, drawY, frameSize.width * scale, frameSize.height * scale, {
+      display.drawRect(hitboxDrawX, hitboxDrawY, frameSize.width * scale, frameSize.height * scale, {
         stroke: '#ffff00',
         lineWidth: 2,
         alpha: 0.8
       });
       
-      // Frame center (GREEN dot) - should overlap with CYAN target
-      const frameCenterX = drawX + (frameSize.width * scale) / 2;
-      const frameCenterY = drawY + (frameSize.height * scale) / 2;
-      display.drawCircle(frameCenterX, frameCenterY, 6, {
+      // Frame center (GREEN dot)
+      display.drawCircle(this.x, this.y, 6, {
         fill: '#00ff00',
         alpha: 1.0
       });
