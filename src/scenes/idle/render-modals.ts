@@ -14,7 +14,7 @@ import { renderWrappedText } from './render-utils';
  */
 export function renderHowToPlayModal(display: IDisplay): void {
   const modalWidth = 600;
-  const modalHeight = 400;
+  const modalHeight = 500;
   const modalX = (display.width - modalWidth) / 2;
   const modalY = (display.height - modalHeight) / 2;
 

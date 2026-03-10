@@ -1,17 +1,20 @@
-import { Node } from './node';
+import { Spacecraft } from './spacecraft';
+import { Resources, createResources } from './resources';
 import { Inventory, createInventory } from './inventory';
+import { CryoState, createCryoState } from '../systems/cryo-system';
+import { Mission } from './mission';
 
 /**
- * Current run state during a Depth Dive session
+ * Current run state during a Salvage Operation session
  */
 export interface RunState {
   /** Current round (1-10) */
   round: number;
-  /** Number of shields (0-2), protects from Rig Collapse */
+  /** Number of shields (0-2), protects from Hull Breach */
   shields: number;
   /** Rewards extracted this run */
   extractedRewards: number;
-  /** Whether the rig has collapsed this run */
+  /** Whether the ship has suffered a hull breach this run */
   collapsed: boolean;
   /** Items collected this run (not yet added to inventory) */
   collectedItems: string[];
@@ -34,10 +37,12 @@ export function createRunState(): RunState {
  * Global game state
  */
 export interface GameState {
-  /** Total energy available (max 1000) */
+  /** Total power available (max 1000) */
   energy: number;
-  /** All 16 nodes in the 4x4 grid */
-  nodes: Node[];
+  /** All 16 ships in the 4x4 grid */
+  spacecraft: Spacecraft[];
+  /** Player resources */
+  resources: Resources;
   /** Player's inventory of Hardware and Crew */
   inventory: Inventory;
   /** Current viral multiplier (1.0 base, 1.5 for 2 hours after sharing) */
@@ -50,39 +55,53 @@ export interface GameState {
   totalPlayEarned: number;
   /** Total extractions completed */
   totalExtractions: number;
-  /** Total rig collapses experienced */
+  /** Total hull breaches experienced */
   totalCollapses: number;
   /** Whether the tutorial has been seen */
   tutorialSeen: boolean;
   /** Whether the tutorial should be skipped (player preference) */
   tutorialSkipped?: boolean;
-  /** Selected hub node IDs for next dive (0-15) */
-  hubSelectedNodes: number[];
+  /** Selected hub ship IDs for next dive (0-15) */
+  hubSelectedShips: number[];
+  /** Cryo system state */
+  cryoState: CryoState;
+  /** Available cryo pod slots to discover */
+  availableCryoPods: number;
+  /** Missions currently in progress */
+  activeMissions: Mission[];
+  /** Missions available to start */
+  availableMissions: Mission[];
+  /** Total missions completed (for progression) */
+  completedMissionCount: number;
 }
 
 /**
- * Creates the initial game state with 16 neutral nodes
+ * Creates the initial game state with 16 neutral ships
  */
 export function createInitialState(): GameState {
-  const nodes: Node[] = [];
+  const spacecraft: Spacecraft[] = [];
   for (let id = 0; id < 16; id++) {
     const row = Math.floor(id / 4);
     const col = id % 4;
-    // Node 5 (row 1, col 1) starts player-owned for initial energy generation
-    const isStarterNode = id === 5;
-    nodes.push({
+    // Ship 5 (row 1, col 1) starts player-owned for initial power generation
+    const isStarterShip = id === 5;
+    spacecraft.push({
       id,
       gridPosition: { row, col },
-      level: 1,
-      stability: 100,
-      owner: isStarterNode ? 'player' : 'neutral',
-      energyAccumulated: 0
+      shipClass: 1,
+      hullIntegrity: 100,
+      owner: isStarterShip ? 'player' : 'neutral',
+      powerAccumulated: 0,
+      mode: isStarterShip ? 'station' : 'derelict',
+      maxRooms: isStarterShip ? 3 : 0,
+      rooms: []
     });
   }
   
   return {
     energy: 150,
-    nodes,
+    spacecraft,
+    resources: createResources(),
     inventory: createInventory(),
     viralMultiplier: 1.0,
     viralMultiplierExpiry: null,
@@ -92,7 +111,12 @@ export function createInitialState(): GameState {
     totalCollapses: 0,
     tutorialSeen: false,
     tutorialSkipped: false,
-    hubSelectedNodes: []
+    hubSelectedShips: [],
+    cryoState: createCryoState(),
+    availableCryoPods: 2,
+    activeMissions: [],
+    availableMissions: [],
+    completedMissionCount: 0
   };
 }
 
@@ -102,9 +126,9 @@ export function createInitialState(): GameState {
 export const BASE_ENERGY_CAP = 1000;
 
 /**
- * Energy generated per node per minute (in milliseconds)
+ * Power generated per ship per minute (in milliseconds)
  */
-export const ENERGY_PER_NODE_PER_MS = 10 / 60000; // 10 per minute
+export const POWER_PER_SHIP_PER_MS = 10 / 60000; // 10 per minute
 
 /**
  * Maximum number of shields
@@ -117,7 +141,7 @@ export const MAX_SHIELDS = 2;
 export const MAX_ROUNDS = 10;
 
 /**
- * Rig collapse probability (35%)
+ * Hull breach probability (35%)
  */
 export const COLLAPSE_PROBABILITY = 0.35;
 

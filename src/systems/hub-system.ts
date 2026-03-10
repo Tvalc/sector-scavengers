@@ -1,7 +1,7 @@
 /**
  * HubSystem
  *
- * Manages the 16-node hub board, random spaceship population, and player selection state.
+ * Manages the 16-ship hub board, random spaceship population, and player selection state.
  * The board uses the SSSSBoards2 static image with clickable cell regions.
  */
 
@@ -62,12 +62,12 @@ export const CENTER_Y = 540;
 export const CLICK_RADIUS = 70;
 
 /**
- * NODE_POSITIONS - Single source of truth for all node positions
+ * SHIP_POSITIONS - Single source of truth for all ship positions
  * 
  * These are screen coordinates for the 16 circle centers on SSSSSBoard board.
  * Board is drawn at (0, 0) filling the full canvas (1920x1080).
  * 
- * Node ID layout (row-major):
+ * Ship ID layout (row-major):
  *   0  1  2  3   (row 0, top of diamond)
  *   4  5  6  7   (row 1)
  *   8  9 10 11   (row 2)
@@ -76,31 +76,31 @@ export const CLICK_RADIUS = 70;
  * Positions form an isometric diamond pattern matching the board's circular depressions.
  * USE THE DEBUGGER (press 'D' in IdleScene) to calibrate these positions!
  */
-export const NODE_POSITIONS: Array<{ x: number; y: number }> = [
+export const SHIP_POSITIONS: Array<{ x: number; y: number }> = [
   // Calibrated positions from debugger - SSSSSBoard (1920x1080)
-  { x: 965, y: 177 },  // 0 - top center
-  { x: 738, y: 298 },  // 1
-  { x: 529, y: 416 },  // 2
-  { x: 308, y: 537 },  // 3 - left edge
-  { x: 534, y: 659 },  // 4
-  { x: 753, y: 531 },  // 5
-  { x: 965, y: 425 },  // 6 - center
-  { x: 1170, y: 289 }, // 7
-  { x: 1396, y: 418 }, // 8
-  { x: 1168, y: 543 }, // 9
-  { x: 968, y: 651 },  // 10
-  { x: 746, y: 776 },  // 11
-  { x: 961, y: 886 },  // 12 - bottom center
-  { x: 1168, y: 778 }, // 13
-  { x: 1377, y: 659 }, // 14
-  { x: 1608, y: 530 }, // 15 - right edge
+  { x: 965, y: 174 },  // 0 - top center
+  { x: 746, y: 290 },  // 1
+  { x: 531, y: 405 },  // 2
+  { x: 313, y: 522 },  // 3
+  { x: 529, y: 645 },  // 4
+  { x: 748, y: 530 },  // 5
+  { x: 960, y: 416 },  // 6 - center
+  { x: 1174, y: 288 }, // 7
+  { x: 1394, y: 405 }, // 8
+  { x: 1178, y: 526 }, // 9
+  { x: 965, y: 647 },  // 10
+  { x: 748, y: 765 },  // 11
+  { x: 963, y: 884 },  // 12
+  { x: 1181, y: 764 }, // 13
+  { x: 1397, y: 651 }, // 14
+  { x: 1607, y: 529 }, // 15 - right edge
 ];
 
 /**
  * 16 hub cell definitions
- * Uses NODE_POSITIONS as the single source of truth
+ * Uses SHIP_POSITIONS as the single source of truth
  */
-export const HUB_CELLS: HubCellDefinition[] = NODE_POSITIONS.map((pos, id) => ({
+export const HUB_CELLS: HubCellDefinition[] = SHIP_POSITIONS.map((pos, id) => ({
   id,
   centerX: pos.x,
   centerY: pos.y,
@@ -108,14 +108,14 @@ export const HUB_CELLS: HubCellDefinition[] = NODE_POSITIONS.map((pos, id) => ({
 }));
 
 /**
- * Get screen position for a node by ID
+ * Get screen position for a ship by ID
  * Single source of truth - same positions used for rendering and click detection
  */
-export function getNodePosition(id: number): { x: number; y: number } {
-  if (id < 0 || id >= NODE_POSITIONS.length) {
+export function getShipPosition(id: number): { x: number; y: number } {
+  if (id < 0 || id >= SHIP_POSITIONS.length) {
     return { x: CENTER_X, y: CENTER_Y };
   }
-  return NODE_POSITIONS[id];
+  return SHIP_POSITIONS[id];
 }
 
 /**

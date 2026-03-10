@@ -6,7 +6,7 @@
  */
 
 import { MakkoEngine, IDisplay } from '@makko/engine';
-import { NODE_POSITIONS } from '../../systems/hub-system';
+import { SHIP_POSITIONS } from '../../systems/hub-system';
 
 /**
  * NodeDebugger provides interactive node position calibration
@@ -25,10 +25,10 @@ export class NodeDebugger {
   toggle(): void {
     this.enabled = !this.enabled;
     if (this.enabled) {
-      this.debugPositions = [...NODE_POSITIONS];
-      console.log('[DEBUG] Node position debugger enabled');
+      this.debugPositions = [...SHIP_POSITIONS];
+      console.log('[DEBUG] Ship position debugger enabled');
     } else {
-      console.log('[DEBUG] Node position debugger disabled');
+      console.log('[DEBUG] Ship position debugger disabled');
     }
   }
 
@@ -54,7 +54,7 @@ export class NodeDebugger {
 
     // R to reset
     if (input.isKeyPressed('KeyR')) {
-      this.debugPositions = [...NODE_POSITIONS];
+      this.debugPositions = [...SHIP_POSITIONS];
       console.log('[DEBUG] Reset to original positions');
     }
 
@@ -129,7 +129,7 @@ export class NodeDebugger {
 
   private renderOriginalPositions(display: IDisplay): void {
     for (let i = 0; i < 16; i++) {
-      const pos = NODE_POSITIONS[i];
+      const pos = SHIP_POSITIONS[i];
       display.drawCircle(pos.x, pos.y, 35, { fill: '#ffff00', alpha: 0.3 });
       display.drawText(`${i}`, pos.x, pos.y + 50, {
         font: '12px monospace',
@@ -224,7 +224,7 @@ export class NodeDebugger {
 
   private printPositions(): void {
     console.log('[DEBUG] Current positions:');
-    console.log('export const NODE_POSITIONS: Array<{ x: number; y: number }> = [');
+    console.log('export const SHIP_POSITIONS: Array<{ x: number; y: number }> = [');
     for (let i = 0; i < 16; i++) {
       const pos = this.debugPositions[i];
       console.log(`  { x: ${Math.round(pos.x)}, y: ${Math.round(pos.y)} },  // ${i}`);

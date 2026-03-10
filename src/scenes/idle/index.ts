@@ -13,13 +13,40 @@ import { HubSystem } from '../../systems/hub-system';
 import { InventorySystem } from '../../systems/inventory-system';
 import { SocialMultiplierSystem } from '../../systems/social-multiplier-system';
 import { SignalLogSystem, signalLogSystem } from '../../systems/signal-log-system';
+import { MissionSystem } from '../../systems/mission-system';
 import { SpaceshipVisual } from '../../ui/spaceship-visual';
-import { BOARD_ASSET_NAME, BOARD_WIDTH, BOARD_HEIGHT } from './constants';
 import { BackgroundRenderer } from './background';
 import { NodeDebugger } from './debug';
 import { InputHandler } from './input-handler';
-import { UIRenderer } from './render-ui';
+import { UIRenderer, CREW_BUTTON_BOUNDS, MISSION_BUTTON_BOUNDS } from './render-ui';
 import { renderHowToPlayModal } from './render-modals';
+import { isPointInBounds } from './render-utils';
+import { renderShipManagementPanel, ROOM_PANEL_BOUNDS } from '../../ui/room-ui';
+import { hasAssignedEngineer } from '../../systems/crew-bonus-system';
+
+// New modular handlers
+import { 
+  handleShipManagementInput, 
+  performShipConversion,
+  renderConversionMessage,
+  type ConversionResult 
+} from './ship-conversion';
+import { 
+  hasMissionNotification, 
+  handleMissionModalInput, 
+  updateMissionProgress,
+  renderMissionModal 
+} from './mission-handlers';
+import { 
+  handleCryoModalInput, 
+  renderCryoModal 
+} from './cryo-handlers';
+import { 
+  renderBoard, 
+  renderSpaceships, 
+  renderTooltipIfNeeded, 
+  loadBoardAsset 
+} from './rendering';
 
 /**
  * IdleScene - main hub scene with board and spaceship selection
@@ -34,6 +61,7 @@ export class IdleScene implements Scene {
   private inventorySystem: InventorySystem;
   private socialMultiplierSystem: SocialMultiplierSystem;
   private signalLog: SignalLogSystem;
+  private missionSystem: MissionSystem;
 
   // Renderers
   private background: BackgroundRenderer;
@@ -49,6 +77,10 @@ export class IdleScene implements Scene {
 
   // Hover state
   private hoveredCellId: number | null = null;
+  
+  // Conversion message state
+  private conversionMessage: string | null = null;
+  private conversionMessageTimer: number = 0;
 
   constructor(game: Game) {
     this.game = game;
@@ -57,6 +89,7 @@ export class IdleScene implements Scene {
     this.inventorySystem = new InventorySystem(game);
     this.socialMultiplierSystem = new SocialMultiplierSystem(game);
     this.signalLog = signalLogSystem;
+    this.missionSystem = new MissionSystem(game.state);
 
     this.background = new BackgroundRenderer();
     this.debugger = new NodeDebugger();
@@ -67,7 +100,7 @@ export class IdleScene implements Scene {
   async init(): Promise<void> {
     this.inventorySystem.loadFromGameState();
     this.background.loadAssets();
-    this.loadBoardAsset();
+    this.boardAsset = loadBoardAsset();
   }
 
   enter(previousScene?: string): void {
@@ -77,10 +110,17 @@ export class IdleScene implements Scene {
     this.inputHandler.setHelpShowing(false);
 
     this.background.loadAssets();
-    this.loadBoardAsset();
+    this.boardAsset = loadBoardAsset();
 
     this.hubSystem.populate();
     this.createSpaceshipVisuals();
+    
+    // Generate available missions if empty
+    if (this.game.state.availableMissions.length === 0) {
+      const missions = this.missionSystem.generateAvailableMissions(3);
+      this.game.state.availableMissions.push(...missions);
+      console.log(`[Mission] Generated ${missions.length} available missions`);
+    }
   }
 
   exit(nextScene?: string): void {
@@ -89,8 +129,74 @@ export class IdleScene implements Scene {
   }
 
   handleInput(): void {
-    const result = this.inputHandler.handleInput(this.game, this.hubSystem);
+    // Mission modal
+    if (this.inputHandler.isMissionModalShowing) {
+      handleMissionModalInput(this.game, this.inputHandler);
+      return;
+    }
+    
+    // Cryo modal
+    if (this.inputHandler.isCryoModalShowing) {
+      handleCryoModalInput(this.game, this.inputHandler);
+      return;
+    }
+    
+    // Ship management panel
+    if (this.inputHandler.isShipManagementShowing) {
+      const consumed = handleShipManagementInput(
+        this.game, 
+        this.inputHandler,
+        (result: ConversionResult) => {
+          this.conversionMessage = result.message;
+          this.conversionMessageTimer = result.duration;
+          if (result.success) {
+            this.inputHandler.setShipManagementShowing(false);
+          }
+        }
+      );
+      if (consumed) return;
+    }
+    
+    const result = this.inputHandler.handleInput(this.game, this.hubSystem, this.inventorySystem);
     this.hoveredCellId = result.hoveredCellId;
+  }
+
+  render(): void {
+    const display = MakkoEngine.display;
+    display.clear('#0a0e1a');
+
+    // Background layers
+    this.background.render(display);
+    renderBoard(display, this.boardAsset);
+    renderSpaceships(display, this.hubSystem, this.spaceshipVisuals, this.debugger as NodeDebugger);
+
+    // UI
+    this.renderMainUI(display);
+    this.renderPanels(display);
+    renderTooltipIfNeeded(display, this.inputHandler, this.inventorySystem, this.uiRenderer);
+
+    // Signal Log
+    this.signalLog.render(display);
+
+    // Modals
+    if (this.inputHandler.isHelpShowing) {
+      renderHowToPlayModal(display);
+    }
+    if (this.inputHandler.isCryoModalShowing) {
+      renderCryoModal(display, this.game);
+    }
+    if (this.inputHandler.isShipManagementShowing) {
+      this.renderShipManagementPanel(display);
+    }
+    if (this.inputHandler.isMissionModalShowing) {
+      renderMissionModal(display, this.game);
+    }
+    
+    // Toast
+    renderConversionMessage(display, this.conversionMessage, this.conversionMessageTimer);
+
+    // Debug overlay
+    this.debugger.render(display);
   }
 
   update(dt: number): void {
@@ -102,56 +208,26 @@ export class IdleScene implements Scene {
     for (const visual of this.spaceshipVisuals.values()) {
       visual.update(dt);
     }
-  }
-
-  render(): void {
-    const display = MakkoEngine.display;
-    display.clear('#0a0e1a');
-
-    // Background layers
-    this.background.render(display);
-    this.renderBoard(display);
-
-    // Spaceships
-    this.renderSpaceships(display);
-
-    // UI
-    this.uiRenderer.renderEnergy(
-      display, 
-      this.idleSystem.energy, 
-      this.idleSystem.energyCap, 
-      this.idleSystem.getEnergyRate()
-    );
-    this.uiRenderer.renderInventoryPanel(display, this.inventorySystem);
-    this.uiRenderer.renderViralMultiplierBadge(display, this.socialMultiplierSystem);
-    this.uiRenderer.renderDiveButton(display, this.hubSystem.getSelectedCount());
-    this.uiRenderer.renderHelpButton(display);
-
-    // Signal Log
-    this.signalLog.render(display);
-
-    // Modal overlay
-    if (this.inputHandler.isHelpShowing) {
-      renderHowToPlayModal(display);
+    
+    // Update conversion message timer
+    if (this.conversionMessageTimer > 0) {
+      this.conversionMessageTimer -= dt;
+      if (this.conversionMessageTimer <= 0) {
+        this.conversionMessage = null;
+      }
     }
-
-    // Debug overlay
-    this.debugger.render(display);
+    
+    // Update mission progress
+    updateMissionProgress(this.game, this.missionSystem, dt);
   }
 
   destroy(): void {
     this.spaceshipVisuals.clear();
   }
-
+  
   // =========================================================================
   // Private helpers
   // =========================================================================
-
-  private loadBoardAsset(): void {
-    if (MakkoEngine.hasStaticAsset(BOARD_ASSET_NAME)) {
-      this.boardAsset = MakkoEngine.staticAsset(BOARD_ASSET_NAME);
-    }
-  }
 
   private createSpaceshipVisuals(): void {
     this.spaceshipVisuals.clear();
@@ -169,27 +245,74 @@ export class IdleScene implements Scene {
     }
   }
 
-  private renderBoard(display: IDisplay): void {
-    if (!this.boardAsset && MakkoEngine.hasStaticAsset(BOARD_ASSET_NAME)) {
-      this.boardAsset = MakkoEngine.staticAsset(BOARD_ASSET_NAME);
+  private renderMainUI(display: IDisplay): void {
+    this.uiRenderer.renderEnergy(
+      display, 
+      this.idleSystem.energy, 
+      this.idleSystem.energyCap, 
+      this.idleSystem.getPowerRate()
+    );
+    
+    if (this.game.state.cryoState) {
+      this.uiRenderer.renderEfficiencyBonus(display, this.game.state.cryoState);
     }
     
-    if (!this.boardAsset) return;
-
-    display.drawImage(this.boardAsset.image, 0, 0, BOARD_WIDTH, BOARD_HEIGHT);
+    this.uiRenderer.renderViralMultiplierBadge(display, this.socialMultiplierSystem);
+    this.uiRenderer.renderDiveButton(display, this.hubSystem.getSelectedCount());
+    this.uiRenderer.renderCrewButton(display, this.isCrewButtonHovered());
+    this.uiRenderer.renderInventoryButton(display);
+    this.uiRenderer.renderHelpButton(display);
+    this.uiRenderer.renderMissionButton(display, hasMissionNotification(this.game));
   }
 
-  private renderSpaceships(display: IDisplay): void {
-    for (const cell of this.hubSystem.cells) {
-      if (!cell.hasSpaceship) continue;
-
-      const visual = this.spaceshipVisuals.get(cell.definition.id);
-      if (visual) {
-        visual.render(display, {
-          selected: cell.selected,
-          debug: this.debugger.isEnabled
-        });
-      }
+  private renderPanels(display: IDisplay): void {
+    // Crew panel
+    if (this.inputHandler.isCrewShowing) {
+      const hoveredSlot = this.inputHandler.getHoveredSlot();
+      const hoveredIndex = hoveredSlot && hoveredSlot.category === 'crew' ? hoveredSlot.index : null;
+      this.uiRenderer.renderCrewPanel(display, this.inventorySystem, hoveredIndex);
     }
+
+    // Inventory panel
+    if (this.inputHandler.isInventoryShowing) {
+      const hoveredSlot = this.inputHandler.getHoveredSlot();
+      const hoveredIndex = hoveredSlot && hoveredSlot.category === 'hardware' ? hoveredSlot.index : null;
+      this.uiRenderer.renderInventoryPanel(display, this.inventorySystem, hoveredIndex);
+    }
+  }
+
+  private renderShipManagementPanel(display: IDisplay): void {
+    const shipId = this.inputHandler.getSelectedShipId();
+    if (shipId === null) return;
+    
+    const ship = this.game.getShip(shipId);
+    if (!ship) return;
+    
+    const cryoState = this.game.state.cryoState;
+    const hasEngineer = hasAssignedEngineer(cryoState, shipId);
+    const hasEngineeringBay = ship.rooms.some(r => r.type === 'engineering');
+    const availablePowerCells = this.game.state.resources.powerCells;
+    
+    renderShipManagementPanel(
+      display,
+      shipId,
+      ship.mode,
+      ship.shipClass,
+      ship.rooms,
+      ship.maxRooms,
+      this.game.state.resources,
+      null,
+      availablePowerCells,
+      hasEngineer,
+      hasEngineeringBay
+    );
+  }
+
+  private isCrewButtonHovered(): boolean {
+    const mouseX = MakkoEngine.input.mouseX;
+    const mouseY = MakkoEngine.input.mouseY;
+    if (mouseX === undefined || mouseY === undefined) return false;
+    
+    return isPointInBounds(mouseX, mouseY, CREW_BUTTON_BOUNDS);
   }
 }

@@ -16,6 +16,18 @@ import { COLLAPSE_PROBABILITY, EXTRACT_BASE_PAYOUT, MAX_SHIELDS } from '../types
 import { WeightedPicker } from '../random/weighted-picker';
 import { SeededRNG } from '../random/seeded-rng';
 import { JuiceSystem } from './juice-system';
+import { calculateExtractDropChance } from '../config/economy-config';
+import { CrewRole } from '../types/crew';
+import {
+  hasAssignedEngineer,
+  hasAssignedScavenger,
+  hasAssignedScientist,
+  hasAssignedMedic,
+  getHullRepairMultiplier,
+  getResourceYieldMultiplier,
+  getGlobalCrewEfficiencyBonus,
+  getDiscoveryBonus
+} from './crew-bonus-system';
 
 /**
  * Card weights for drafting
@@ -24,7 +36,7 @@ const CARD_WEIGHTS: Record<CardType, number> = {
   SCAN: 25,
   REPAIR: 20,
   BYPASS: 15,
-  OVERCLOCK: 15,
+  UPGRADE: 15,
   EXTRACT: 25
 };
 
@@ -43,7 +55,7 @@ export interface CardPlayResult {
  * Context for card execution
  */
 export interface CardContext {
-  nodeId?: number;
+  shipId?: number;
   juice: JuiceSystem;
 }
 
@@ -116,7 +128,7 @@ export class TacticCardSystem {
     if (run.collapsed) {
       return {
         success: false,
-        message: 'Rig has collapsed',
+        message: 'Hull breach occurred',
         energySpent: 0
       };
     }
@@ -152,8 +164,8 @@ export class TacticCardSystem {
       case 'BYPASS':
         result = this.executeBypass();
         break;
-      case 'OVERCLOCK':
-        result = this.executeOverclock();
+      case 'UPGRADE':
+        result = this.executeUpgrade();
         break;
       case 'EXTRACT':
         result = this.executeExtract(context);
@@ -176,58 +188,78 @@ export class TacticCardSystem {
   }
 
   /**
-   * SCAN: Control a neutral node
+   * SCAN: Claim a derelict ship
    */
   private executeScan(): CardPlayResult {
-    const neutralNodes = this.game.state.nodes.filter(n => n.owner === 'neutral');
+    const neutralShips = this.game.state.spacecraft.filter(s => s.owner === 'neutral');
     
-    if (neutralNodes.length === 0) {
+    if (neutralShips.length === 0) {
       return {
         success: false,
-        message: 'No neutral nodes to scan',
+        message: 'No derelict ships to scan',
         energySpent: 0
       };
     }
 
-    // Capture a random neutral node
-    const node = neutralNodes[Math.floor(this.rng.next() * neutralNodes.length)];
-    node.owner = 'player';
+    // Claim a random neutral ship
+    const ship = neutralShips[Math.floor(this.rng.next() * neutralShips.length)];
+    ship.owner = 'player';
 
-    // Apply stability bonus from items
+    // Apply hull integrity bonus from items
     const stabilityBonus = this.game.getTotalBonus('stability_percent');
-    node.stability = Math.min(100, 100 + stabilityBonus);
+    ship.hullIntegrity = Math.min(100, 100 + stabilityBonus);
 
     return {
       success: true,
-      message: `Node ${node.id} captured!`,
+      message: `Ship ${ship.id} claimed!`,
       energySpent: 0
     };
   }
 
   /**
-   * REPAIR: Increase stability
+   * REPAIR: Restore hull integrity
    */
   private executeRepair(): CardPlayResult {
-    const playerNodes = this.game.state.nodes.filter(n => n.owner === 'player');
+    const playerShips = this.game.state.spacecraft.filter(s => s.owner === 'player');
 
-    if (playerNodes.length === 0) {
+    if (playerShips.length === 0) {
       return {
         success: false,
-        message: 'No nodes to repair',
+        message: 'No ships to repair',
         energySpent: 0
       };
     }
 
     let totalRepair = 0;
-    for (const node of playerNodes) {
-      const repairAmount = 15 + (node.level * 5);
-      node.stability = Math.min(100, node.stability + repairAmount);
+    const cryoState = this.game.state.cryoState;
+    
+    // Get global medic efficiency bonus (+10% per medic)
+    const medicEfficiencyBonus = getGlobalCrewEfficiencyBonus(cryoState);
+    const efficiencyMultiplier = 1 + medicEfficiencyBonus;
+    
+    for (const ship of playerShips) {
+      // Base repair amount
+      let repairAmount = 15 + (ship.shipClass * 5);
+      
+      // Apply engineer bonus (+50% if engineer assigned)
+      const repairMultiplier = getHullRepairMultiplier(cryoState, ship.id);
+      repairAmount = Math.floor(repairAmount * repairMultiplier);
+      
+      // Apply medic efficiency bonus (global)
+      repairAmount = Math.floor(repairAmount * efficiencyMultiplier);
+      
+      ship.hullIntegrity = Math.min(100, ship.hullIntegrity + repairAmount);
       totalRepair += repairAmount;
+    }
+
+    // Log efficiency bonus if active
+    if (medicEfficiencyBonus > 0) {
+      console.log(`[Efficiency] Medic bonus: +${Math.round(medicEfficiencyBonus * 100)}%`);
     }
 
     return {
       success: true,
-      message: `Repaired ${playerNodes.length} nodes (+${totalRepair} stability)`,
+      message: `Repaired ${playerShips.length} ships (+${totalRepair} hull integrity)`,
       energySpent: 0
     };
   }
@@ -262,33 +294,33 @@ export class TacticCardSystem {
   }
 
   /**
-   * OVERCLOCK: Increase node level
+   * UPGRADE: Upgrade ship class
    */
-  private executeOverclock(): CardPlayResult {
-    const playerNodes = this.game.state.nodes.filter(
-      n => n.owner === 'player' && n.level < 3
+  private executeUpgrade(): CardPlayResult {
+    const playerShips = this.game.state.spacecraft.filter(
+      s => s.owner === 'player' && s.shipClass < 3
     );
 
-    if (playerNodes.length === 0) {
+    if (playerShips.length === 0) {
       return {
         success: false,
-        message: 'No nodes to overclock',
+        message: 'No ships to upgrade',
         energySpent: 0
       };
     }
 
-    const node = playerNodes[Math.floor(this.rng.next() * playerNodes.length)];
-    node.level++;
+    const ship = playerShips[Math.floor(this.rng.next() * playerShips.length)];
+    ship.shipClass++;
 
     return {
       success: true,
-      message: `Node ${node.id} upgraded to level ${node.level}!`,
+      message: `Ship ${ship.id} upgraded to class ${ship.shipClass}!`,
       energySpent: 0
     };
   }
 
   /**
-   * EXTRACT: Cash out with collapse risk
+   * EXTRACT: Salvage with hull breach risk
    */
   private executeExtract(context: CardContext): CardPlayResult {
     const run = this.game.state.currentRun;
@@ -300,25 +332,25 @@ export class TacticCardSystem {
       };
     }
 
-    const playerNodes = this.game.state.nodes.filter(n => n.owner === 'player');
+    const playerShips = this.game.state.spacecraft.filter(s => s.owner === 'player');
     
-    if (playerNodes.length === 0) {
+    if (playerShips.length === 0) {
       return {
         success: false,
-        message: 'No nodes to extract from',
+        message: 'No ships to salvage',
         energySpent: 0
       };
     }
 
-    // Get target node (use context or random)
-    const node = context.nodeId !== undefined
-      ? this.game.getNode(context.nodeId)
-      : playerNodes[Math.floor(this.rng.next() * playerNodes.length)];
+    // Get target ship (use context or random)
+    const ship = context.shipId !== undefined
+      ? this.game.getShip(context.shipId)
+      : playerShips[Math.floor(this.rng.next() * playerShips.length)];
 
-    if (!node || node.owner !== 'player') {
+    if (!ship || ship.owner !== 'player') {
       return {
         success: false,
-        message: 'Invalid extraction target',
+        message: 'Invalid salvage target',
         energySpent: 0
       };
     }
@@ -338,43 +370,55 @@ export class TacticCardSystem {
         };
       }
 
-      // Rig collapsed!
+      // Hull breach!
       run.collapsed = true;
       run.extractedRewards = 0;
       run.collectedItems = [];
 
-      // Reset node
-      node.owner = 'neutral';
-      node.level = 1;
-      node.stability = 100;
+      // Reset ship
+      ship.owner = 'neutral';
+      ship.shipClass = 1;
+      ship.hullIntegrity = 100;
 
       // Trigger effects
-      this.juice.triggerRigCollapse();
+      this.juice.triggerHullBreach();
       this.game.state.totalCollapses++;
 
       return {
         success: true,
-        message: 'RIG COLLAPSED! All rewards lost.',
+        message: 'HULL BREACH! All rewards lost.',
         energySpent: 0,
         collapsed: true,
         payout: 0
       };
     }
 
-    // Successful extract
+    // Successful salvage
+    const cryoState = this.game.state.cryoState;
+    
+    // Apply scavenger bonus (+25% resource yield)
+    const scavengerMultiplier = getResourceYieldMultiplier(cryoState, ship.id);
+    
+    // Apply medic efficiency bonus (global)
+    const medicEfficiencyBonus = getGlobalCrewEfficiencyBonus(cryoState);
+    const efficiencyMultiplier = 1 + medicEfficiencyBonus;
+    
     const viralMultiplier = this.game.getViralMultiplier();
-    const payout = EXTRACT_BASE_PAYOUT * (1 + node.level) * viralMultiplier;
+    const payout = Math.floor(EXTRACT_BASE_PAYOUT * (1 + ship.shipClass) * viralMultiplier * scavengerMultiplier * efficiencyMultiplier);
     
     run.extractedRewards += payout;
     this.game.state.totalExtractions++;
 
+    // Check for power cell drop
+    this.checkPowerCellDrop(ship);
+
     // Trigger ion beam
-    const screenX = this.getNodeScreenX(node);
+    const screenX = this.getShipScreenX(ship);
     this.juice.triggerIonBeam(screenX);
 
     return {
       success: true,
-      message: `Extracted $${Math.floor(payout)} from node ${node.id}!`,
+      message: `Salvaged ${Math.floor(payout)} from ship ${ship.id}!`,
       energySpent: 0,
       collapsed: false,
       payout
@@ -382,14 +426,48 @@ export class TacticCardSystem {
   }
 
   /**
-   * Get node screen X position (for ion beam)
+   * Check for power cell drop on successful extraction
    */
-  private getNodeScreenX(node: { gridPosition: { row: number; col: number } }): number {
+  private checkPowerCellDrop(ship: { id: number; shipClass: 1 | 2 | 3 }): void {
+    // Check if any engineer is assigned to this ship
+    const hasEngineer = this.hasAssignedEngineer(ship.id);
+    const hasScavenger = this.hasAssignedScavenger(ship.id);
+    
+    // Calculate drop chance using EconomyConfig
+    const dropChance = calculateExtractDropChance(ship.shipClass, hasEngineer, hasScavenger);
+    
+    // Roll for power cell drop
+    if (Math.random() < dropChance) {
+      this.game.state.resources.powerCells++;
+      console.log(`[EXTRACT] Power cell found! (Ship class ${ship.shipClass}, ${dropChance * 100}% chance)`);
+    }
+  }
+
+  /**
+   * Check if any engineer is assigned to a specific ship
+   */
+  private hasAssignedEngineer(shipId: number): boolean {
+    if (!this.game.state.cryoState) return false;
+    return hasAssignedEngineer(this.game.state.cryoState, shipId);
+  }
+
+  /**
+   * Check if any scavenger is assigned to a specific ship
+   */
+  private hasAssignedScavenger(shipId: number): boolean {
+    if (!this.game.state.cryoState) return false;
+    return hasAssignedScavenger(this.game.state.cryoState, shipId);
+  }
+
+  /**
+   * Get ship screen X position (for ion beam)
+   */
+  private getShipScreenX(ship: { gridPosition: { row: number; col: number } }): number {
     const gridWidth = 600;
     const startX = (1920 - gridWidth) / 2;
     const cellWidth = gridWidth / 4;
     
-    return startX + (node.gridPosition.col * cellWidth) + (cellWidth / 2);
+    return startX + (ship.gridPosition.col * cellWidth) + (cellWidth / 2);
   }
 
   /**

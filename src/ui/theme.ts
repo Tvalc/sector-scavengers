@@ -42,7 +42,7 @@ export const CARD_COLORS = {
   SCAN: COLORS.neonCyan,
   REPAIR: COLORS.successGreen,
   BYPASS: COLORS.warningYellow,
-  OVERCLOCK: COLORS.neonMagenta,
+  UPGRADE: COLORS.neonMagenta,
   EXTRACT: COLORS.warningRed,
 } as const;
 

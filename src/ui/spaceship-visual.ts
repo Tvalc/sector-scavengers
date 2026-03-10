@@ -28,8 +28,11 @@ export interface SpaceshipRenderOptions {
 // Constants
 // ============================================================================
 
-/** Selection ring radius in pixels */
-const SELECTION_RADIUS = 90;
+/** Selection ring horizontal radius in pixels (width/2) */
+const SELECTION_RADIUS_X = 85;
+
+/** Selection ring vertical radius in pixels (height/2) */
+const SELECTION_RADIUS_Y = 50;
 
 /** Selection ring line width */
 const SELECTION_LINE_WIDTH = 3;
@@ -40,11 +43,54 @@ const SELECTION_ALPHA = 0.9;
 /** Selection ring color */
 const SELECTION_COLOR = '#ffffff';
 
-/** Sprite character name for spaceship */
-const SPRITE_CHARACTER = 'derelictcommon_derelict_common_core';
+/** Glow effect configuration */
+const GLOW_LAYERS = 4;
+const GLOW_MAX_RADIUS_X = 105;
+const GLOW_MAX_RADIUS_Y = 70;
+const GLOW_PULSE_SPEED = 0.002; // Radians per millisecond
 
-/** Animation name for idle rotation */
-const ANIMATION_NAME = 'derelictcommon_idlerotation_default';
+/**
+ * Sprite configuration for each rarity tier
+ */
+interface SpriteConfig {
+  characterName: string;
+  animationName: string;
+}
+
+/**
+ * Mapping of rarity tiers to their sprite configurations
+ * TODO: Add specific sprites for Rare, Epic, Legendary, and Jackpot tiers
+ */
+const RARITY_SPRITES: Record<RarityTier, SpriteConfig> = {
+  [RarityTier.Common]: {
+    characterName: 'derelictcommon_derelict_common_core',
+    animationName: 'derelictcommon_idlerotation_default',
+  },
+  [RarityTier.Uncommon]: {
+    characterName: 'Drone_Derelict_UnCommon_Core',
+    animationName: 'information_drone_docking_default',
+  },
+  // Placeholder: using Common sprite
+  [RarityTier.Rare]: {
+    characterName: 'derelictcommon_derelict_common_core',
+    animationName: 'derelictcommon_idlerotation_default',
+  },
+  // Placeholder: using Uncommon sprite
+  [RarityTier.Epic]: {
+    characterName: 'Drone_Derelict_UnCommon_Core',
+    animationName: 'information_drone_docking_default',
+  },
+  // Placeholder: using Common sprite
+  [RarityTier.Legendary]: {
+    characterName: 'derelictcommon_derelict_common_core',
+    animationName: 'derelictcommon_idlerotation_default',
+  },
+  // Placeholder: using Uncommon sprite
+  [RarityTier.Jackpot]: {
+    characterName: 'Drone_Derelict_UnCommon_Core',
+    animationName: 'information_drone_docking_default',
+  },
+};
 
 // ============================================================================
 // SpaceshipVisual Class
@@ -71,6 +117,9 @@ export class SpaceshipVisual {
 
   /** Whether sprite was successfully loaded */
   private loaded: boolean = false;
+
+  /** Animation time for glow pulsing (milliseconds) */
+  private animTime: number = 0;
 
   /**
    * Create a new spaceship visual
@@ -101,6 +150,7 @@ export class SpaceshipVisual {
     if (this.character && this.loaded) {
       this.character.update(deltaTime);
     }
+    this.animTime += deltaTime;
   }
 
   /**
@@ -113,9 +163,9 @@ export class SpaceshipVisual {
     const selected = options?.selected ?? false;
     const debug = options?.debug ?? false;
 
-    // Draw selection ring if selected
+    // Draw selection ring if selected (fixed screen-space size, not scaled)
     if (selected) {
-      this.drawSelectionRing(display, scale);
+      this.drawSelectionRing(display);
     }
 
     // Draw spaceship sprite
@@ -134,21 +184,16 @@ export class SpaceshipVisual {
   // ==========================================================================
 
   /**
-   * Initialize the character sprite
+   * Initialize the character sprite based on rarity tier
    */
   private initCharacter(): void {
     try {
-      this.character = MakkoEngine.sprite(SPRITE_CHARACTER);
+      const spriteConfig = RARITY_SPRITES[this.rarity];
+      this.character = MakkoEngine.sprite(spriteConfig.characterName);
 
       if (this.character && this.character.isLoaded()) {
-        this.character.play(ANIMATION_NAME, true);
+        this.character.play(spriteConfig.animationName, true);
         this.loaded = true;
-        
-        // Debug: Log character info once
-        const hitbox = this.character.getHitbox();
-        if (hitbox) {
-          console.log(`[SpaceshipVisual] Hitbox for ${SPRITE_CHARACTER}:`, hitbox);
-        }
       } else {
         this.character = null;
         this.loaded = false;
@@ -160,14 +205,32 @@ export class SpaceshipVisual {
   }
 
   /**
-   * Draw the selection ring
+   * Draw the selection ring with glowing effect (fixed screen-space oval shape)
    */
-  private drawSelectionRing(display: IDisplay, scale: number): void {
-    const radius = SELECTION_RADIUS * scale;
-
-    display.drawCircle(this.x, this.y, radius, {
+  private drawSelectionRing(display: IDisplay): void {
+    // Pulse animation (0 to 1 cycle)
+    const pulse = (Math.sin(this.animTime * GLOW_PULSE_SPEED) + 1) / 2; // 0.0 to 1.0
+    
+    // Draw multiple glow layers for a radiating effect (fixed size, not scaled)
+    for (let i = 0; i < GLOW_LAYERS; i++) {
+      const layerProgress = i / GLOW_LAYERS; // 0.0 to ~1.0
+      const expandedProgress = (layerProgress + pulse * 0.3) % 1.0; // Animated expansion
+      
+      const radiusX = SELECTION_RADIUS_X + (GLOW_MAX_RADIUS_X - SELECTION_RADIUS_X) * expandedProgress;
+      const radiusY = SELECTION_RADIUS_Y + (GLOW_MAX_RADIUS_Y - SELECTION_RADIUS_Y) * expandedProgress;
+      const alpha = (1 - expandedProgress) * 0.5; // Fade out as it expands
+      
+      display.drawEllipse(this.x, this.y, radiusX, radiusY, {
+        stroke: SELECTION_COLOR,
+        lineWidth: SELECTION_LINE_WIDTH,
+        alpha: alpha,
+      });
+    }
+    
+    // Draw main selection ring (solid, always visible)
+    display.drawEllipse(this.x, this.y, SELECTION_RADIUS_X, SELECTION_RADIUS_Y, {
       stroke: SELECTION_COLOR,
-      lineWidth: SELECTION_LINE_WIDTH,
+      lineWidth: SELECTION_LINE_WIDTH + 1,
       alpha: SELECTION_ALPHA,
     });
   }
@@ -180,53 +243,72 @@ export class SpaceshipVisual {
       return;
     }
 
-    const frameSize = this.character.getCurrentFrameSize();
+    const hitbox = this.character.getHitbox();
     
-    // MakkoEngine uses bottom-center anchor: (x, y) = bottom-center of sprite
-    // Offset Y by half the sprite height so the CENTER of the sprite lands at (this.x, this.y)
-    const drawY = this.y + (frameSize.height * scale) / 2;
-    this.character.draw(display, this.x, drawY, {
+    // Calculate offset to center the hitbox at (this.x, this.y)
+    // Hitbox defines bounds relative to anchor point
+    // We need to move the anchor so the hitbox center lands at target
+    let drawX = this.x;
+    let drawY = this.y;
+    
+    if (hitbox) {
+      // Hitbox center offset from anchor (in unscaled pixels)
+      const hitboxCenterOffsetX = hitbox.x + hitbox.width / 2;
+      const hitboxCenterOffsetY = hitbox.y + hitbox.height / 2;
+      
+      // Move draw position to compensate (opposite direction)
+      drawX = this.x - hitboxCenterOffsetX * scale;
+      drawY = this.y - hitboxCenterOffsetY * scale;
+    }
+    
+    this.character.draw(display, drawX, drawY, {
       scale: scale,
       flipH: false,
       flipV: false,
       alpha: debug ? 0.7 : 1.0,
     });
 
-    // Debug hitbox rectangle (centered on where sprite is actually drawn)
-    const hitboxDrawX = this.x - (frameSize.width * scale) / 2;
-    const hitboxDrawY = drawY - (frameSize.height * scale);
-
     // Debug visualization
     if (debug) {
-      // Target position (CYAN circle) - where we pass to sprite.draw
+      // Target position (CYAN circle) - where we WANT the ship center
       display.drawCircle(this.x, this.y, 20, {
         stroke: '#00ffff',
         lineWidth: 3,
         alpha: 1.0
       });
       
-      // Draw position (WHITE X) - sprite anchor (bottom-center at this.x, this.y)
-      display.drawLine(this.x - 15, this.y - 15, this.x + 15, this.y + 15, {
+      // Draw position (WHITE X) - where anchor was placed
+      display.drawLine(drawX - 15, drawY - 15, drawX + 15, drawY + 15, {
         stroke: '#ffffff',
         lineWidth: 2
       });
-      display.drawLine(this.x + 15, this.y - 15, this.x - 15, this.y + 15, {
+      display.drawLine(drawX + 15, drawY - 15, drawX - 15, drawY + 15, {
         stroke: '#ffffff',
         lineWidth: 2
       });
       
-      // Frame bounds (YELLOW rectangle)
-      display.drawRect(hitboxDrawX, hitboxDrawY, frameSize.width * scale, frameSize.height * scale, {
-        stroke: '#ffff00',
-        lineWidth: 2,
-        alpha: 0.8
-      });
-      
-      // Frame center (GREEN dot)
-      display.drawCircle(this.x, this.y, 6, {
-        fill: '#00ff00',
-        alpha: 1.0
-      });
+      // If we have hitbox data, show where the sprite bounds actually are
+      if (hitbox) {
+        const scaledWidth = hitbox.width * scale;
+        const scaledHeight = hitbox.height * scale;
+        const boxX = drawX + hitbox.x * scale;
+        const boxY = drawY + hitbox.y * scale;
+        
+        // Hitbox bounds (MAGENTA rectangle)
+        display.drawRect(boxX, boxY, scaledWidth, scaledHeight, {
+          stroke: '#ff00ff',
+          lineWidth: 2,
+          alpha: 0.8
+        });
+        
+        // Hitbox center (RED dot)
+        const hitboxCenterX = boxX + scaledWidth / 2;
+        const hitboxCenterY = boxY + scaledHeight / 2;
+        display.drawCircle(hitboxCenterX, hitboxCenterY, 8, {
+          fill: '#ff0000',
+          alpha: 1.0
+        });
+      }
     }
   }
 }

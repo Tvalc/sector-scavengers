@@ -65,8 +65,14 @@ export class BackgroundRenderer {
 
   /** Render background layers */
   render(display: IDisplay): void {
+    this.renderBaseFill(display);
     this.renderSpacefield(display);
     this.renderStars(display);
+  }
+
+  /** Render solid base fill to ensure full canvas coverage */
+  private renderBaseFill(display: IDisplay): void {
+    display.drawRect(0, 0, display.width, display.height, { fill: '#0a0e1a' });
   }
 
   /** Render scrolling spacefield */

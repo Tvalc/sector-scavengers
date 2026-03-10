@@ -8,10 +8,13 @@
 export const HOW_TO_PLAY_CONTENT = {
   title: 'SCAVENGER PROTOCOL',
   bullets: [
-    'Nodes generate Energy passively (10/min each)',
-    'Spend Energy in Depth Dive to control nodes and extract rewards',
-    'Use Tactic Cards: SCAN, REPAIR, BYPASS, OVERCLOCK, EXTRACT',
-    'Beware Rig Collapse (35%) on EXTRACT—use Shields to protect your run!'
+    'Ships generate Power passively (10/min each)',
+    'Spend Power in Salvage Operations to claim ships and extract resources',
+    'Use Tactic Cards: SCAN, REPAIR, BYPASS, UPGRADE, EXTRACT',
+    'Beware Hull Breach (35%) on EXTRACT—use Shields to protect your run!',
+    'Open Inventory (I) to view Hardware—equipment that boosts power, hull integrity, and rewards',
+    'Open Crew (C) to manage your team—members provide abilities like Auto-Bypass',
+    'Hover over items in Inventory or Crew to see what they do—bonuses apply automatically!'
   ]
 };
 

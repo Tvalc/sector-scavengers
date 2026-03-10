@@ -35,7 +35,7 @@ export const TUTORIAL_DIALOGUE: DialogueTree = createDialogueTree(
     {
       id: 'sector_location',
       speaker: 'V.A.L.U.',
-      text: 'You are currently located in Sector 7, one of our most vibrantrrrr... er, "opportunity-rich" deep water installations! The Company has invested HEAVILY in your success here.',
+      text: 'You are currently located in Sector 7, one of our most vibrantrrrr... er, "opportunity-rich" salvage zones! The Company has invested HEAVILY in your success here.',
       portrait: 'valu',
       emotion: 'neutral',
       nextNodeId: 'debt_reveal',
@@ -142,7 +142,7 @@ export const TUTORIAL_DIALOGUE: DialogueTree = createDialogueTree(
     {
       id: 'crew_sarcastic',
       speaker: 'V.A.L.U.',
-      text: "They ARE! The Company selects only the MOST loyal crew members. We find that prolonged deep-sea isolation creates WONDERFUL brand ambassadors. Practically family!",
+      text: "They ARE! The Company selects only the MOST loyal crew members. We find that prolonged orbital isolation creates WONDERFUL brand ambassadors. Practically family!",
       portrait: 'valu',
       emotion: 'warm',
       nextNodeId: 'dive_transition',
@@ -171,7 +171,7 @@ export const TUTORIAL_DIALOGUE: DialogueTree = createDialogueTree(
     {
       id: 'dive_scan',
       speaker: 'V.A.L.U.',
-      text: "During a Depth Dive, you'll spend your accumulated energy to SCAN the depths for Data Relay Infrastructure — we call them 'NODES.' Each node generates passive energy income!",
+      text: "During a Depth Dive, you'll spend your accumulated energy to SCAN the salvage zones for derelict spacecraft — we call them 'NODES.' Each node generates passive energy income!",
       portrait: 'valu',
       emotion: 'helpful',
       action: 'show_node',
@@ -386,7 +386,7 @@ export const TUTORIAL_DIALOGUE: DialogueTree = createDialogueTree(
     {
       id: 'closing_transition',
       speaker: 'V.A.L.U.',
-      text: "Well, Max! I think you're FULLY prepared for your new role as a Deep Sea Asset Acquisition Specialist! Do you have any final questions before we begin your productivity journey?",
+      text: "Well, Max! I think you're FULLY prepared for your new role as a Deep Space Asset Acquisition Specialist! Do you have any final questions before we begin your productivity journey?",
       portrait: 'valu',
       emotion: 'friendly',
       nextNodeId: 'max_final_question',

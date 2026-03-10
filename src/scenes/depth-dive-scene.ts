@@ -15,7 +15,7 @@ import { JuiceSystem } from '../systems/juice-system';
 import { TacticCard, CardType } from '../types/cards';
 import { MAX_ROUNDS, MAX_SHIELDS } from '../types/state';
 import { COLORS, CARD_COLORS, FONTS, LAYOUT } from '../ui/theme';
-import { BatteryCoreDisplay, NodeVisual, NodeVisualOptions } from '../ui/visual-components';
+import { BatteryCoreDisplay, ShipVisual, ShipVisualOptions } from '../ui/visual-components';
 import { DangerMeter } from '../ui/visual-components';
 import { COLLAPSE_PROBABILITY } from '../types/state';
 
@@ -306,37 +306,37 @@ export class DepthDiveScene implements Scene {
       align: 'center'
     });
 
-    // Stability bar - right of round (with rounded ends)
-    const stabilityBarX = 1020;
-    const stabilityBarY = 45;
-    const stabilityBarWidth = 300;
-    const stabilityBarHeight = 20;
+    // Hull integrity bar - right of round (with rounded ends)
+    const hullBarX = 1020;
+    const hullBarY = 45;
+    const hullBarWidth = 300;
+    const hullBarHeight = 20;
 
-    // Calculate average stability
-    const playerNodes = this.game.state.nodes.filter(n => n.owner === 'player');
-    const avgStability = playerNodes.length > 0
-      ? playerNodes.reduce((sum, n) => sum + n.stability, 0) / playerNodes.length
+    // Calculate average hull integrity
+    const playerShips = this.game.state.spacecraft.filter(s => s.owner === 'player');
+    const avgHullIntegrity = playerShips.length > 0
+      ? playerShips.reduce((sum, s) => sum + s.hullIntegrity, 0) / playerShips.length
       : 100;
 
     // Background with rounded corners
-    display.drawRoundRect(stabilityBarX, stabilityBarY, stabilityBarWidth, stabilityBarHeight, stabilityBarHeight / 2, {
+    display.drawRoundRect(hullBarX, hullBarY, hullBarWidth, hullBarHeight, hullBarHeight / 2, {
       fill: COLORS.panelBg,
       alpha: 0.8
     });
 
     // Fill with rounded corners (only if there's fill)
-    const fillWidth = stabilityBarWidth * (avgStability / 100);
+    const fillWidth = hullBarWidth * (avgHullIntegrity / 100);
     if (fillWidth > 0) {
-      const fillColor = avgStability > 50 ? COLORS.successGreen : 
-                        avgStability > 25 ? COLORS.warningYellow : COLORS.warningRed;
-      display.drawRoundRect(stabilityBarX, stabilityBarY, Math.max(fillWidth, stabilityBarHeight), stabilityBarHeight, stabilityBarHeight / 2, {
+      const fillColor = avgHullIntegrity > 50 ? COLORS.successGreen : 
+                        avgHullIntegrity > 25 ? COLORS.warningYellow : COLORS.warningRed;
+      display.drawRoundRect(hullBarX, hullBarY, Math.max(fillWidth, hullBarHeight), hullBarHeight, hullBarHeight / 2, {
         fill: fillColor,
         alpha: 0.9
       });
     }
 
     // Border with rounded corners
-    display.drawRoundRect(stabilityBarX, stabilityBarY, stabilityBarWidth, stabilityBarHeight, stabilityBarHeight / 2, {
+    display.drawRoundRect(hullBarX, hullBarY, hullBarWidth, hullBarHeight, hullBarHeight / 2, {
       stroke: COLORS.dimText,
       lineWidth: 1,
       alpha: 0.5
@@ -369,30 +369,30 @@ export class DepthDiveScene implements Scene {
     });
 
     // Title
-    display.drawText('SECTOR MAP', mapX + mapWidth / 2, mapY + 20, {
+    display.drawText('SALVAGE SECTOR', mapX + mapWidth / 2, mapY + 20, {
       font: FONTS.bodyFont,
       fill: COLORS.dimText,
       align: 'center'
     });
 
-    // Draw nodes using NodeVisual component (mini mode)
+    // Draw ships using ShipVisual component (mini mode)
     const cellWidth = mapWidth / 4;
     const cellHeight = (mapHeight - 40) / 4;
 
-    for (const node of this.game.state.nodes) {
-      const nodeX = mapX + (node.gridPosition.col * cellWidth) + cellWidth / 2;
-      const nodeY = mapY + 40 + (node.gridPosition.row * cellHeight) + cellHeight / 2;
-      const nodeRadius = 8 + (node.level - 1) * 3;
+    for (const ship of this.game.state.spacecraft) {
+      const shipX = mapX + (ship.gridPosition.col * cellWidth) + cellWidth / 2;
+      const shipY = mapY + 40 + (ship.gridPosition.row * cellHeight) + cellHeight / 2;
+      const shipRadius = 8 + (ship.shipClass - 1) * 3;
 
-      // Use NodeVisual in mini mode for simplified rendering
-      const nodeVisual = new NodeVisual(nodeX, nodeY, nodeRadius, node.level);
-      const options: NodeVisualOptions = {
-        owner: node.owner === 'player' ? 'player' : 'neutral',
-        stability: node.stability,
+      // Use ShipVisual in mini mode for simplified rendering
+      const shipVisual = new ShipVisual(shipX, shipY, shipRadius, ship.shipClass);
+      const options: ShipVisualOptions = {
+        owner: ship.owner === 'player' ? 'player' : 'neutral',
+        hullIntegrity: ship.hullIntegrity,
         hovered: false,
         mini: true
       };
-      nodeVisual.render(display, options);
+      shipVisual.renderShip(display, options);
     }
   }
 
@@ -591,7 +591,7 @@ export class DepthDiveScene implements Scene {
   private renderCollapsedState(display: typeof MakkoEngine.display): void {
     const { width, height } = display;
 
-    display.drawText('RIG COLLAPSED!', width / 2, height / 2 - 50, {
+    display.drawText('HULL BREACH!', width / 2, height / 2 - 50, {
       font: 'bold 64px monospace',
       fill: COLORS.warningRed,
       align: 'center'

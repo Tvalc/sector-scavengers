@@ -256,7 +256,7 @@ export class ResultsScene implements Scene {
     const { width } = display;
 
     // Title - collapse
-    display.drawText('RIG COLLAPSE', width / 2, 100, {
+    display.drawText('HULL BREACH', width / 2, 100, {
       font: 'bold 48px monospace',
       fill: COLORS.warningRed,
       align: 'center'
@@ -300,32 +300,32 @@ export class ResultsScene implements Scene {
       alpha: 0.5
     });
 
-    // Extracted nodes breakdown
-    const playerNodes = this.game.state.nodes.filter(n => n.owner === 'player');
+    // Salvaged ships breakdown
+    const playerShips = this.game.state.spacecraft.filter(s => s.owner === 'player');
     let lineY = summaryY;
     const lineHeight = 24;
 
-    display.drawText('EXTRACTED NODES:', width / 2, lineY, {
+    display.drawText('SALVAGED SHIPS:', width / 2, lineY, {
       font: FONTS.labelFont,
       fill: COLORS.white,
       align: 'center'
     });
     lineY += lineHeight + 10;
 
-    // Show node breakdown (simulated extraction history)
-    if (playerNodes.length > 0) {
+    // Show ship breakdown (simulated salvage history)
+    if (playerShips.length > 0) {
       const viralMultiplier = this.game.getViralMultiplier();
-      for (const node of playerNodes.slice(0, 5)) {
-        const nodePayout = Math.floor(100 * (1 + node.level) * viralMultiplier);
-        display.drawText(`Node ${node.id} (Level ${node.level}): ${nodePayout}`, width / 2, lineY, {
+      for (const ship of playerShips.slice(0, 5)) {
+        const shipPayout = Math.floor(100 * (1 + ship.shipClass) * viralMultiplier);
+        display.drawText(`Ship ${ship.id} (Class ${ship.shipClass}): ${shipPayout}`, width / 2, lineY, {
           font: FONTS.smallFont,
           fill: COLORS.dimText,
           align: 'center'
         });
         lineY += lineHeight;
       }
-      if (playerNodes.length > 5) {
-        display.drawText(`... and ${playerNodes.length - 5} more`, width / 2, lineY, {
+      if (playerShips.length > 5) {
+        display.drawText(`... and ${playerShips.length - 5} more`, width / 2, lineY, {
           font: FONTS.tinyFont,
           fill: COLORS.dimText,
           align: 'center'
@@ -333,7 +333,7 @@ export class ResultsScene implements Scene {
         lineY += lineHeight;
       }
     } else {
-      display.drawText('No nodes extracted', width / 2, lineY, {
+      display.drawText('No ships salvaged', width / 2, lineY, {
         font: FONTS.smallFont,
         fill: COLORS.dimText,
         align: 'center'

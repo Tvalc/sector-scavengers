@@ -475,13 +475,23 @@
       "animations": {
         "derelictcommon_idlerotation_default": {
           "fps": 24,
-          "json": "https://api.makko.ai/storage/v1/object/public/sprite-sheets/ec8388e4-636e-4a3d-a34f-35b8f3d550c8/derelictcommon_idlerotation_default.json?t=1773088654270",
-          "image": "https://api.makko.ai/storage/v1/object/public/sprite-sheets/ec8388e4-636e-4a3d-a34f-35b8f3d550c8/derelictcommon_idlerotation_default.webp?t=1773088654270",
+          "json": "https://api.makko.ai/storage/v1/object/public/sprite-sheets/ec8388e4-636e-4a3d-a34f-35b8f3d550c8/derelictcommon_idlerotation_default.json?t=1773120851316",
+          "image": "https://api.makko.ai/storage/v1/object/public/sprite-sheets/ec8388e4-636e-4a3d-a34f-35b8f3d550c8/derelictcommon_idlerotation_default.webp?t=1773120851316",
           "priority": "medium",
           "frameCount": 96,
           "spriteSheetId": "c97be7b0-200e-408a-b41b-d913675e3877",
           "animationLength": 4,
           "metadata": {
+            "anchor": {
+              "x": 240,
+              "y": 298,
+              "strategy": "manual",
+              "normalized": {
+                "x": 0.5194805194805194,
+                "y": 0.952076677316294
+              }
+            },
+            "scale": 1,
             "dimensions": {
               "width": 462,
               "height": 313
@@ -491,6 +501,28 @@
       },
       "metadata": {
         "character_id": "abcb7641-b7c9-48ac-b645-691bb72de928"
+      }
+    },
+    "information_drone_derelict_uncommon_core": {
+      "animations": {
+        "information_drone_docking_default": {
+          "fps": 24,
+          "json": "https://api.makko.ai/storage/v1/object/public/sprite-sheets/70bffe37-916d-443b-9cd1-e81a744c9b71/information_drone_docking_default.json?t=1773127129621",
+          "image": "https://api.makko.ai/storage/v1/object/public/sprite-sheets/70bffe37-916d-443b-9cd1-e81a744c9b71/information_drone_docking_default.webp?t=1773127129621",
+          "priority": "medium",
+          "frameCount": 48,
+          "spriteSheetId": "46f624dc-815f-4b50-bcdc-a1d560961f34",
+          "animationLength": 2,
+          "metadata": {
+            "dimensions": {
+              "width": 327,
+              "height": 500
+            }
+          }
+        }
+      },
+      "metadata": {
+        "character_id": "91d75678-8b0c-4521-8374-bb732cc5dea1"
       }
     }
   }

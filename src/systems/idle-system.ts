@@ -1,13 +1,14 @@
 /**
  * Idle System
  *
- * Handles passive energy generation for player-owned nodes.
- * Each node generates 10 Energy per minute, capped at 1000 (base).
+ * Handles passive power generation for player-owned ships.
+ * Each ship generates 10 Power per minute, capped at 1000 (base).
  */
 
 import type { Game } from '../game/game';
-import { Node } from '../types/node';
-import { ENERGY_PER_NODE_PER_MS, BASE_ENERGY_CAP } from '../types/state';
+import { Spacecraft } from '../types/spacecraft';
+import { POWER_PER_SHIP_PER_MS, BASE_ENERGY_CAP } from '../types/state';
+import { getGlobalCrewEfficiencyBonus } from './crew-bonus-system';
 
 /**
  * IdleSystem - manages passive energy generation
@@ -16,8 +17,8 @@ export class IdleSystem {
   private game: Game;
   private lastUpdateTime: number = 0;
 
-  /** Energy rate constants */
-  private static readonly ENERGY_PER_NODE_PER_MINUTE = 10;
+  /** Power rate constants */
+  private static readonly POWER_PER_SHIP_PER_MINUTE = 10;
   private static readonly BASE_ENERGY_CAP = 1000;
 
   constructor(game: Game) {
@@ -52,17 +53,21 @@ export class IdleSystem {
 
     this.lastUpdateTime = now;
 
-    // Get all player-owned nodes
-    const playerNodes = this.game.state.nodes.filter(n => n.owner === 'player');
+    // Get all player-owned ships (defensive null check for corrupted saves)
+    const playerShips = (this.game.state.spacecraft ?? []).filter(s => s.owner === 'player');
 
-    if (playerNodes.length === 0) return;
+    if (playerShips.length === 0) return;
 
-    // Calculate energy generated (10 energy per node per minute)
-    const energyPerNodePerMs = 10 / 60000; // 10 per minute in ms
-    const totalEnergyGenerated = playerNodes.length * energyPerNodePerMs * elapsed;
+    // Get medic efficiency bonus (global +10% per medic assigned)
+    const medicBonus = getGlobalCrewEfficiencyBonus(this.game.state.cryoState);
+    const efficiencyMultiplier = 1 + medicBonus;
 
-    // Add energy (respects cap with bonuses)
-    this.game.addEnergy(totalEnergyGenerated);
+    // Calculate power generated (10 power per ship per minute)
+    const powerPerShipPerMs = 10 / 60000; // 10 per minute in ms
+    const totalPowerGenerated = playerShips.length * powerPerShipPerMs * elapsed * efficiencyMultiplier;
+
+    // Add power (respects cap with bonuses)
+    this.game.addEnergy(totalPowerGenerated);
   }
 
   /**
@@ -74,12 +79,18 @@ export class IdleSystem {
   }
 
   /**
-   * Get energy generation rate (energy per second)
+   * Get power generation rate (power per second)
    */
-  getEnergyRate(): number {
-    const playerNodes = this.game.state.nodes.filter(n => n.owner === 'player');
-    // 10 energy per minute per node = 10/60 energy per second per node
-    return playerNodes.length * (10 / 60);
+  getPowerRate(): number {
+    // Defensive null check for corrupted saves
+    const playerShips = (this.game.state.spacecraft ?? []).filter(s => s.owner === 'player');
+    
+    // Get medic efficiency bonus
+    const medicBonus = getGlobalCrewEfficiencyBonus(this.game.state.cryoState);
+    const efficiencyMultiplier = 1 + medicBonus;
+    
+    // 10 power per minute per ship = 10/60 power per second per ship
+    return playerShips.length * (10 / 60) * efficiencyMultiplier;
   }
 
   /**

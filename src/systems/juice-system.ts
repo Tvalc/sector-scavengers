@@ -2,9 +2,9 @@
  * Juice System
  *
  * Visual effects for game feedback:
- * - Screen shake (Rig Collapse)
- * - Red glitch overlay (Rig Collapse)
- * - Ion beam effect (successful Extract)
+ * - Screen shake (Hull Breach)
+ * - Red glitch overlay (Hull Breach)
+ * - Ion beam effect (successful Salvage)
  *
  * Usage:
  *   const juice = new JuiceSystem();
@@ -125,9 +125,9 @@ export class JuiceSystem {
   }
 
   /**
-   * Trigger Rig Collapse effect (shake + glitch)
+   * Trigger Hull Breach effect (shake + glitch)
    */
-  triggerRigCollapse(): void {
+  triggerHullBreach(): void {
     this.triggerShake();
     this.triggerGlitch();
   }

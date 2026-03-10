@@ -2,7 +2,7 @@
  * Game Core with Scene Flow
  *
  * Main game class managing:
- * - Persistent game state (energy, nodes, inventory, viral multiplier)
+ * - Persistent game state (power, spacecraft, inventory, viral multiplier)
  * - Scene-based architecture via SceneManager
  * - State machine for game flow (idle → depthDive → results)
  */
@@ -18,9 +18,12 @@ import {
   VIRAL_MULTIPLIER_DURATION,
   VIRAL_MULTIPLIER_BOOST
 } from '../types/state';
-import { Node } from '../types/node';
+import { Spacecraft } from '../types/spacecraft';
 import { Inventory } from '../types/inventory';
+import { Resources } from '../types/resources';
 import { SaveManager } from '../save/save-manager';
+import { CryoState } from '../systems/cryo-system';
+import { Mission } from '../types/mission';
 
 /**
  * Game flow states
@@ -39,7 +42,7 @@ export type GameFlowState = typeof GameFlowStates[keyof typeof GameFlowStates];
 interface SectorScavengersSave {
   version: number;
   energy: number;
-  nodes: Node[];
+  spacecraft: Spacecraft[];
   inventory: Inventory;
   viralMultiplier: number;
   viralMultiplierExpiry: number | null;
@@ -48,7 +51,13 @@ interface SectorScavengersSave {
   totalCollapses: number;
   tutorialSeen: boolean;
   tutorialSkipped: boolean;
-  hubSelectedNodes: number[];
+  hubSelectedShips: number[];
+  resources: Resources;
+  cryoState: CryoState;
+  availableCryoPods: number;
+  activeMissions: Mission[];
+  availableMissions: Mission[];
+  completedMissionCount: number;
 }
 
 /**
@@ -230,7 +239,7 @@ export class Game {
       return;
     }
     // Clear hub selection after dive ends
-    this.clearHubSelectedNodes();
+    this.clearHubSelectedShips();
     this.stateMachine.transition(GameFlowStates.RESULTS, this);
   }
 
@@ -337,17 +346,17 @@ export class Game {
   }
 
   /**
-   * Get a node by ID
+   * Get a ship by ID
    */
-  getNode(id: number): Node | undefined {
-    return this.state.nodes.find(n => n.id === id);
+  getShip(id: number): Spacecraft | undefined {
+    return this.state.spacecraft.find(s => s.id === id);
   }
 
   /**
-   * Get all player-owned nodes
+   * Get all player-owned ships
    */
-  getPlayerNodes(): Node[] {
-    return this.state.nodes.filter(n => n.owner === 'player');
+  getPlayerShips(): Spacecraft[] {
+    return this.state.spacecraft.filter(s => s.owner === 'player');
   }
 
   /**
@@ -366,24 +375,24 @@ export class Game {
   // ============================================================================
 
   /**
-   * Set selected hub nodes for the next dive
+   * Set selected hub ships for the next dive
    */
-  setHubSelectedNodes(ids: number[]): void {
-    this.state.hubSelectedNodes = [...ids];
+  setHubSelectedShips(ids: number[]): void {
+    this.state.hubSelectedShips = [...ids];
   }
 
   /**
-   * Get currently selected hub nodes
+   * Get currently selected hub ships
    */
-  getHubSelectedNodes(): number[] {
-    return [...this.state.hubSelectedNodes];
+  getHubSelectedShips(): number[] {
+    return [...this.state.hubSelectedShips];
   }
 
   /**
    * Clear hub selection (called after dive ends)
    */
-  clearHubSelectedNodes(): void {
-    this.state.hubSelectedNodes = [];
+  clearHubSelectedShips(): void {
+    this.state.hubSelectedShips = [];
   }
 
   // ============================================================================
@@ -396,7 +405,7 @@ export class Game {
   saveState(): void {
     this.saveManager.save({
       energy: this.state.energy,
-      nodes: this.state.nodes,
+      spacecraft: this.state.spacecraft,
       inventory: this.state.inventory,
       viralMultiplier: this.state.viralMultiplier,
       viralMultiplierExpiry: this.state.viralMultiplierExpiry,
@@ -405,7 +414,13 @@ export class Game {
       totalCollapses: this.state.totalCollapses,
       tutorialSeen: this.state.tutorialSeen,
       tutorialSkipped: this.state.tutorialSkipped ?? false,
-      hubSelectedNodes: this.state.hubSelectedNodes
+      hubSelectedShips: this.state.hubSelectedShips,
+      resources: this.state.resources,
+      cryoState: this.state.cryoState,
+      availableCryoPods: this.state.availableCryoPods,
+      activeMissions: this.state.activeMissions,
+      availableMissions: this.state.availableMissions,
+      completedMissionCount: this.state.completedMissionCount
     });
   }
 
@@ -416,17 +431,58 @@ export class Game {
     const saveData = this.saveManager.load();
 
     if (saveData) {
-      this.state.energy = saveData.energy;
-      this.state.nodes = saveData.nodes;
-      this.state.inventory = saveData.inventory;
-      this.state.viralMultiplier = saveData.viralMultiplier;
-      this.state.viralMultiplierExpiry = saveData.viralMultiplierExpiry;
-      this.state.totalPlayEarned = saveData.totalPlayEarned;
-      this.state.totalExtractions = saveData.totalExtractions;
-      this.state.totalCollapses = saveData.totalCollapses;
+      // Primitive values - use null coalescing for safety
+      this.state.energy = saveData.energy ?? this.state.energy;
+      this.state.viralMultiplier = saveData.viralMultiplier ?? 1.0;
+      this.state.viralMultiplierExpiry = saveData.viralMultiplierExpiry ?? null;
+      this.state.totalPlayEarned = saveData.totalPlayEarned ?? 0;
+      this.state.totalExtractions = saveData.totalExtractions ?? 0;
+      this.state.totalCollapses = saveData.totalCollapses ?? 0;
       this.state.tutorialSeen = saveData.tutorialSeen ?? false;
       this.state.tutorialSkipped = saveData.tutorialSkipped ?? false;
-      this.state.hubSelectedNodes = saveData.hubSelectedNodes ?? [];
+      this.state.hubSelectedShips = saveData.hubSelectedShips ?? [];
+      
+      // Array/object values - validate before assigning to prevent undefined overwrites
+      if (saveData.spacecraft && Array.isArray(saveData.spacecraft)) {
+        this.state.spacecraft = saveData.spacecraft;
+      }
+      
+      if (saveData.inventory && 
+          typeof saveData.inventory === 'object' &&
+          'hardware' in saveData.inventory && 
+          'crew' in saveData.inventory) {
+        this.state.inventory = saveData.inventory;
+      }
+      
+      // Resources
+      if (saveData.resources && typeof saveData.resources === 'object') {
+        this.state.resources = saveData.resources;
+      }
+      
+      // Cryo state
+      if (saveData.cryoState && typeof saveData.cryoState === 'object') {
+        this.state.cryoState = saveData.cryoState;
+      }
+      
+      // Available cryo pods
+      if (typeof saveData.availableCryoPods === 'number') {
+        this.state.availableCryoPods = saveData.availableCryoPods;
+      }
+      
+      // Active missions
+      if (saveData.activeMissions && Array.isArray(saveData.activeMissions)) {
+        this.state.activeMissions = saveData.activeMissions;
+      }
+      
+      // Available missions
+      if (saveData.availableMissions && Array.isArray(saveData.availableMissions)) {
+        this.state.availableMissions = saveData.availableMissions;
+      }
+      
+      // Completed mission count
+      if (typeof saveData.completedMissionCount === 'number') {
+        this.state.completedMissionCount = saveData.completedMissionCount;
+      }
       
       // Check viral multiplier expiry on load
       this.updateViralMultiplier();

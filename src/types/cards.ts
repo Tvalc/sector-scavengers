@@ -1,7 +1,7 @@
 /**
  * Tactic Card types for Depth Dive sessions
  */
-export type CardType = 'SCAN' | 'REPAIR' | 'BYPASS' | 'OVERCLOCK' | 'EXTRACT';
+export type CardType = 'SCAN' | 'REPAIR' | 'BYPASS' | 'UPGRADE' | 'EXTRACT';
 
 /**
  * Represents a tactic card that can be drafted during Depth Dive
@@ -18,24 +18,24 @@ export interface TacticCard {
 }
 
 /**
- * SCAN - Control a Neutral Node
- * Cost: 60 Energy
+ * SCAN - Claim a Derelict Ship
+ * Cost: 60 Power
  */
 export const SCAN_CARD: TacticCard = {
   type: 'SCAN',
   energyCost: 60,
-  description: 'Control a Neutral Node',
+  description: 'Claim a Derelict Ship',
   hasRisk: false
 };
 
 /**
- * REPAIR - Increase Rig Stability
- * Cost: 40 Energy
+ * REPAIR - Restore Hull Integrity
+ * Cost: 40 Power
  */
 export const REPAIR_CARD: TacticCard = {
   type: 'REPAIR',
   energyCost: 40,
-  description: 'Increase Rig Stability (Level 1-3)',
+  description: 'Restore Hull Integrity',
   hasRisk: false
 };
 
@@ -52,26 +52,26 @@ export const BYPASS_CARD: TacticCard = {
 };
 
 /**
- * OVERCLOCK - Move signal strength between tiles
- * Cost: 25 Energy
+ * UPGRADE - Upgrade Ship Class
+ * Cost: 25 Power
  */
-export const OVERCLOCK_CARD: TacticCard = {
-  type: 'OVERCLOCK',
+export const UPGRADE_CARD: TacticCard = {
+  type: 'UPGRADE',
   energyCost: 25,
-  description: 'Move signal strength between tiles',
+  description: 'Upgrade Ship Class',
   hasRisk: false
 };
 
 /**
- * EXTRACT - Cash out node for points
+ * EXTRACT - Salvage ship for resources
  * Cost: Free
- * Risk: 35% Rig Collapse (resets node, empties run loot unless Shielded)
- * Payout: $100 × (1 + Level) × viralMultiplier
+ * Risk: 35% Hull Breach (resets ship, empties run loot unless Shielded)
+ * Payout: $100 × (1 + Ship Class) × viralMultiplier
  */
 export const EXTRACT_CARD: TacticCard = {
   type: 'EXTRACT',
   energyCost: 0,
-  description: 'Cash out node for points. 35% collapse risk!',
+  description: 'Salvage ship for resources. 35% hull breach risk!',
   hasRisk: true
 };
 
@@ -82,7 +82,7 @@ export const ALL_CARDS: TacticCard[] = [
   SCAN_CARD,
   REPAIR_CARD,
   BYPASS_CARD,
-  OVERCLOCK_CARD,
+  UPGRADE_CARD,
   EXTRACT_CARD
 ];
 

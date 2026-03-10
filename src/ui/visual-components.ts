@@ -138,16 +138,26 @@ export interface NodeVisualOptions {
 }
 
 /**
+ * ShipVisual render options
+ */
+export interface ShipVisualOptions {
+  owner: 'player' | 'neutral';
+  hullIntegrity: number; // 0-100
+  hovered: boolean;
+  mini: boolean; // Simplified rendering for mini-map
+}
+
+/**
  * NodeVisual - Hexagon node with level indicators
  *
  * Used for main grid nodes and mini-map nodes in DepthDiveScene.
  * Supports player-owned (cyan glow) and neutral (gray) states.
  */
 export class NodeVisual {
-  private x: number;
-  private y: number;
-  private radius: number;
-  private level: number; // 1-3
+  protected x: number;
+  protected y: number;
+  protected radius: number;
+  protected level: number; // 1-3
 
   constructor(x: number, y: number, radius: number, level: number) {
     this.x = x;
@@ -159,7 +169,7 @@ export class NodeVisual {
   /**
    * Generate hexagon points (flat-top orientation)
    */
-  private generateHexagonPoints(centerX: number, centerY: number, radius: number): Array<{ x: number; y: number }> {
+  protected generateHexagonPoints(centerX: number, centerY: number, radius: number): Array<{ x: number; y: number }> {
     const points: Array<{ x: number; y: number }> = [];
     for (let i = 0; i < 6; i++) {
       const angle = (Math.PI / 3) * i - Math.PI / 2;
@@ -177,6 +187,21 @@ export class NodeVisual {
    * @param options - Render options (owner, stability, hovered, mini)
    */
   render(display: IDisplay, options: NodeVisualOptions): void {
+    // Check if we're being called with ShipVisualOptions (has hullIntegrity instead of stability)
+    const stability = 'hullIntegrity' in options ? (options as any).hullIntegrity : options.stability;
+    const actualOptions: NodeVisualOptions = {
+      owner: options.owner,
+      stability: stability,
+      hovered: options.hovered,
+      mini: options.mini
+    };
+    this.renderNode(display, actualOptions);
+  }
+
+  /**
+   * Internal render implementation
+   */
+  private renderNode(display: IDisplay, options: NodeVisualOptions): void {
     const { x, y, radius, level } = this;
     const { owner, stability, hovered, mini } = options;
 
@@ -284,6 +309,32 @@ export class NodeVisual {
       stroke: baseColor,
       lineWidth: 1,
     });
+  }
+}
+
+/**
+ * ShipVisual - Alias for NodeVisual with ship-specific options
+ * 
+ * Accepts ShipVisualOptions (hullIntegrity) and converts to NodeVisualOptions (stability)
+ */
+export class ShipVisual extends NodeVisual {
+  constructor(x: number, y: number, radius: number, level: number) {
+    super(x, y, radius, level);
+  }
+
+  /**
+   * Render the ship using ShipVisualOptions
+   * Converts hullIntegrity to stability for base class
+   */
+  renderShip(display: IDisplay, options: ShipVisualOptions): void {
+    // Convert ShipVisualOptions to NodeVisualOptions
+    const nodeOptions: NodeVisualOptions = {
+      owner: options.owner,
+      stability: options.hullIntegrity,
+      hovered: options.hovered,
+      mini: options.mini
+    };
+    super.render(display, nodeOptions);
   }
 }
 
