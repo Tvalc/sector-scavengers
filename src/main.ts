@@ -108,13 +108,16 @@ async function main(): Promise<void> {
     // Disable image smoothing for pixel art
     MakkoEngine.display.setImageSmoothing(false);
 
-    // Stretch to fill window - NO aspect ratio preservation
+    // Stretch to fill window - no aspect ratio preservation to avoid letterboxing
     MakkoEngine.display.fitToWindow(false);
+    MakkoEngine.display.setAutoFit('window');
     
-    // Update size on resize to keep filling the window
-    window.addEventListener('resize', () => {
-      MakkoEngine.display.fitToWindow(false);
-    });
+    // Log canvas size for debugging
+    console.log('[Main] Canvas size:', MakkoEngine.display.canvas.width, 'x', MakkoEngine.display.canvas.height);
+    console.log('[Main] Display size:', MakkoEngine.display.width, 'x', MakkoEngine.display.height);
+    
+    // Set cursor to default
+    MakkoEngine.display.setCursor('default');
 
     // Initialize Play.fun SDK (dynamic injection)
     try {
@@ -177,9 +180,19 @@ async function main(): Promise<void> {
       'KeyS',
       'KeyC',
       'KeyT',
+      'KeyD',
+      'KeyP',
+      'KeyR',
+      'Digit0',
       'Digit1',
       'Digit2',
-      'Digit3'
+      'Digit3',
+      'Digit4',
+      'Digit5',
+      'Digit6',
+      'Digit7',
+      'Digit8',
+      'Digit9'
     ]);
 
     // Shift+F for fullscreen toggle - check in game loop
@@ -253,11 +266,7 @@ function showErrorScreen(message: string): void {
   });
 }
 
-// Handle window resize gracefully
-window.addEventListener('resize', () => {
-  // Canvas maintains aspect ratio via Display class
-  // No additional handling needed - MakkoEngine handles this
-});
+// Handle window resize - MakkoEngine's setAutoFit handles this automatically
 
 // Entry point - start the game
 main().catch((error) => {

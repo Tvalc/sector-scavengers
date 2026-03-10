@@ -9,7 +9,7 @@ import { MakkoEngine, IDisplay, StaticAsset } from '@makko/engine';
 import type { Scene } from '../scene/interfaces';
 import type { Game } from '../game/game';
 import { IdleSystem } from '../systems/idle-system';
-import { HubSystem, HubCellState } from '../systems/hub-system';
+import { HubSystem, HubCellState, NODE_POSITIONS } from '../systems/hub-system';
 import { InventorySystem, SLOT_LIMITS } from '../systems/inventory-system';
 import { SocialMultiplierSystem } from '../systems/social-multiplier-system';
 import { SignalLogSystem, signalLogSystem } from '../systems/signal-log-system';
@@ -31,10 +31,13 @@ const HOW_TO_PLAY_CONTENT = {
 };
 
 /** Board asset name from manifest */
-const BOARD_ASSET_NAME = 'ssssboards2';
+const BOARD_ASSET_NAME = 'sssssboard';
 
-/** Board position on screen (x offset) */
-const BOARD_X = 285;
+/** Board dimensions (full canvas) */
+const BOARD_WIDTH = 1920;
+const BOARD_HEIGHT = 1080;
+const BOARD_CENTER_X = 960;
+const BOARD_CENTER_Y = 540;
 
 /**
  * IdleScene - main hub scene with board and spaceship selection
@@ -70,6 +73,17 @@ export class IdleScene implements Scene {
   // Spacefield background asset
   private spacefieldAsset: StaticAsset | null = null;
 
+  // Spacefield scroll offset (pixels)
+  private spacefieldScrollOffset: number = 0;
+
+  // Star positions (seeded random, consistent each frame)
+  private starPositions: Array<{ x: number; y: number; radius: number; color: string; alpha: number }> = [];
+
+  // DEBUG: Node position debugger mode
+  private debugMode: boolean = false;
+  private debugPositions: Array<{ x: number; y: number }> = [];
+  private selectedNodeIndex: number = 0;
+
   constructor(game: Game) {
     this.game = game;
     this.idleSystem = new IdleSystem(game);
@@ -88,6 +102,9 @@ export class IdleScene implements Scene {
     
     // Load board asset
     this.loadBoardAsset();
+
+    // Generate star positions (seeded, 70 stars)
+    this.generateStarPositions(70);
   }
 
   /**
@@ -108,10 +125,13 @@ export class IdleScene implements Scene {
     this.inventorySystem.loadFromGameState();
     this.showHowToPlay = false;
 
-    // Reload board asset if needed
-    if (!this.boardAsset) {
-      this.loadBoardAsset();
-    }
+    // Load assets
+    this.loadBoardAsset();
+    
+    // Debug: Log asset loading status
+    console.log('[IdleScene] Asset status:');
+    console.log('  - boardAsset:', this.boardAsset ? 'loaded' : 'MISSING');
+    console.log('  - spacefieldAsset:', this.spacefieldAsset ? 'loaded' : 'MISSING');
 
     // Populate the board with random spaceships
     this.hubSystem.populate();
@@ -147,6 +167,25 @@ export class IdleScene implements Scene {
   handleInput(): void {
     const input = MakkoEngine.input;
 
+    // DEBUG: Toggle node debugger with 'D' key
+    if (input.isKeyPressed('KeyD')) {
+      this.debugMode = !this.debugMode;
+      if (this.debugMode) {
+        this.debugPositions = [...NODE_POSITIONS];
+        console.log('[DEBUG] Node position debugger enabled');
+        console.log('[DEBUG] Click to place node, 0-9 keys to select node, P to print positions');
+      } else {
+        console.log('[DEBUG] Node position debugger disabled');
+      }
+      return;
+    }
+
+    // DEBUG: In debug mode, handle node placement
+    if (this.debugMode) {
+      this.handleDebugInput();
+      return;
+    }
+
     // Check for How to Play toggle
     if (input.isKeyPressed('KeyH') || input.isKeyPressed('Slash')) {
       this.showHowToPlay = !this.showHowToPlay;
@@ -163,11 +202,12 @@ export class IdleScene implements Scene {
       return;
     }
 
-    // Mouse interaction - input.mouseX/mouseY are already in game coordinates
+    // Mouse interaction - input.mouseX/mouseY are already in game coordinates (1920x1080 space)
     const mouseX = input.mouseX;
     const mouseY = input.mouseY;
 
     if (mouseX !== undefined && mouseY !== undefined) {
+      
       // Check DIVE button
       if (this.isPointInBounds(mouseX, mouseY, this.diveButtonBounds)) {
         MakkoEngine.display.setCursor('pointer');
@@ -205,6 +245,92 @@ export class IdleScene implements Scene {
   }
 
   /**
+   * DEBUG: Handle node position debugger input
+   */
+  private handleDebugInput(): void {
+    const input = MakkoEngine.input;
+
+    // Number keys 0-9 to select node
+    for (let i = 0; i <= 9; i++) {
+      if (input.isKeyPressed(`Digit${i}` as any) || input.isKeyPressed(`Numpad${i}` as any)) {
+        if (input.isKeyDown('ShiftLeft') || input.isKeyDown('ShiftRight')) {
+          // Shift+digit for 10-15 (0=10, 1=11, etc.)
+          const idx = 10 + i;
+          if (idx < 16) {
+            this.selectedNodeIndex = idx;
+            console.log(`[DEBUG] Selected node ${idx}`);
+          }
+        } else {
+          this.selectedNodeIndex = i;
+          console.log(`[DEBUG] Selected node ${i}`);
+        }
+        return;
+      }
+    }
+
+    // Arrow keys to nudge selected node
+    const nudge = input.isKeyDown('ShiftLeft') || input.isKeyDown('ShiftRight') ? 10 : 1;
+    if (input.isKeyPressed('ArrowLeft')) {
+      this.debugPositions[this.selectedNodeIndex].x -= nudge;
+      console.log(`[DEBUG] Node ${this.selectedNodeIndex}: x=${this.debugPositions[this.selectedNodeIndex].x}`);
+    }
+    if (input.isKeyPressed('ArrowRight')) {
+      this.debugPositions[this.selectedNodeIndex].x += nudge;
+      console.log(`[DEBUG] Node ${this.selectedNodeIndex}: x=${this.debugPositions[this.selectedNodeIndex].x}`);
+    }
+    if (input.isKeyPressed('ArrowUp')) {
+      this.debugPositions[this.selectedNodeIndex].y -= nudge;
+      console.log(`[DEBUG] Node ${this.selectedNodeIndex}: y=${this.debugPositions[this.selectedNodeIndex].y}`);
+    }
+    if (input.isKeyPressed('ArrowDown')) {
+      this.debugPositions[this.selectedNodeIndex].y += nudge;
+      console.log(`[DEBUG] Node ${this.selectedNodeIndex}: y=${this.debugPositions[this.selectedNodeIndex].y}`);
+    }
+
+    // Mouse click to place node - mouseX/mouseY are already in game coordinates
+    const mouseX = input.mouseX;
+    const mouseY = input.mouseY;
+    if (mouseX !== undefined && mouseY !== undefined && input.isMousePressed(0)) {
+      this.debugPositions[this.selectedNodeIndex] = { x: Math.round(mouseX), y: Math.round(mouseY) };
+      console.log(`[DEBUG] Node ${this.selectedNodeIndex} placed at game coords (${Math.round(mouseX)}, ${Math.round(mouseY)})`);
+      // Auto-advance to next node
+      if (this.selectedNodeIndex < 15) {
+        this.selectedNodeIndex++;
+      }
+    }
+
+    // P to print current positions as code
+    if (input.isKeyPressed('KeyP')) {
+      this.printDebugPositions();
+    }
+
+    // R to reset to original positions
+    if (input.isKeyPressed('KeyR')) {
+      this.debugPositions = [...NODE_POSITIONS];
+      console.log('[DEBUG] Reset to original positions');
+    }
+  }
+
+  /**
+   * DEBUG: Print positions as TypeScript code
+   */
+  private printDebugPositions(): void {
+    console.log('[DEBUG] Current positions:');
+    console.log('export const NODE_POSITIONS: Array<{ x: number; y: number }> = [');
+    for (let i = 0; i < 16; i++) {
+      const pos = this.debugPositions[i];
+      const row = Math.floor(i / 4);
+      const isFirst = i % 4 === 0;
+      const isLast = i % 4 === 3;
+      const rowComment = isFirst ? `  // Row ${row}\n  ` : '  ';
+      const lineEnd = i < 15 ? ',' : '';
+      const comment = isLast ? `  // ${i}` : `  // ${i}`;
+      console.log(`  { x: ${Math.round(pos.x)}, y: ${Math.round(pos.y)} },  // ${i}`);
+    }
+    console.log('];');
+  }
+
+  /**
    * Handle DIVE button click
    */
   private handleDiveClick(): void {
@@ -229,6 +355,9 @@ export class IdleScene implements Scene {
   }
 
   update(dt: number): void {
+    // Update spacefield scroll (wraps at asset width)
+    this.spacefieldScrollOffset += dt * 0.02;
+
     // Update systems
     this.idleSystem.update(dt);
     this.socialMultiplierSystem.update(dt);
@@ -243,11 +372,14 @@ export class IdleScene implements Scene {
   render(): void {
     const display = MakkoEngine.display;
 
-    // Clear background
-    display.clear(COLORS.background);
+    // Clear with dark background
+    display.clear('#0a0e1a');
 
-    // Render spacefield background (full canvas)
+    // Render scrolling spacefield background
     this.renderSpacefield(display);
+
+    // Render code-drawn starfield
+    this.renderStars(display);
 
     // Render board background on top of starfield
     this.renderBoard(display);
@@ -269,36 +401,117 @@ export class IdleScene implements Scene {
     if (this.showHowToPlay) {
       this.renderHowToPlayModal(display);
     }
+
+    // DEBUG: Render node debugger overlay
+    if (this.debugMode) {
+      this.renderDebugOverlay(display);
+    }
   }
 
   /**
-   * Render the spacefield background scaled to fill canvas
+   * Render the spacefield background with horizontal scrolling
+   * Spacefield asset is 1620x1080, stretched to cover full canvas
+   * Tile horizontally for infinite scroll effect
    */
   private renderSpacefield(display: IDisplay): void {
-    if (this.spacefieldAsset) {
-      display.drawImage(
-        this.spacefieldAsset.image,
-        0,
-        0,
-        display.width,
-        display.height
-      );
+    // If asset not loaded, try to load it again (MakkoEngine may have loaded it since scene init)
+    if (!this.spacefieldAsset) {
+      if (MakkoEngine.hasStaticAsset('spacefield')) {
+        this.spacefieldAsset = MakkoEngine.staticAsset('spacefield');
+        console.log('[IdleScene] Spacefield asset loaded on demand');
+      } else {
+        // No asset - skip (stars will still show, dark background already cleared)
+        return;
+      }
+    }
+
+    const assetWidth = this.spacefieldAsset.width; // Use actual asset width (1620)
+    const scrollX = this.spacefieldScrollOffset % assetWidth;
+
+    // Scale to cover full canvas width (1920 / 1620)
+    const scaleX = display.width / assetWidth;
+    const drawWidth = assetWidth * scaleX;
+
+    // Draw two copies offset to create seamless infinite scroll, covering full canvas
+    // First copy at current scroll position
+    display.drawImage(
+      this.spacefieldAsset.image,
+      -scrollX * scaleX,
+      0,
+      drawWidth,
+      display.height
+    );
+
+    // Second copy offset to fill the gap
+    display.drawImage(
+      this.spacefieldAsset.image,
+      -scrollX * scaleX + drawWidth,
+      0,
+      drawWidth,
+      display.height
+    );
+  }
+
+  /**
+   * Generate star positions using seeded random for consistency
+   */
+  private generateStarPositions(count: number): void {
+    this.starPositions = [];
+
+    // Simple seeded RNG (seed: 42)
+    let seed = 42;
+    const random = () => {
+      seed = (seed * 9301 + 49297) % 233280;
+      return seed / 233280;
+    };
+
+    for (let i = 0; i < count; i++) {
+      // 80% white, 20% cyan
+      const isCyan = random() < 0.2;
+      this.starPositions.push({
+        x: random() * 1920,
+        y: random() * 1080,
+        radius: 1 + random() * 2, // 1-3 pixels
+        color: isCyan ? '#00f0ff' : '#ffffff',
+        alpha: 0.3 + random() * 0.3, // 0.3-0.6
+      });
     }
   }
 
   /**
-   * Render the board background image
+   * Render code-drawn starfield after spacefield
+   */
+  private renderStars(display: IDisplay): void {
+    for (const star of this.starPositions) {
+      display.drawCircle(star.x, star.y, star.radius, {
+        fill: star.color,
+        alpha: star.alpha,
+      });
+    }
+  }
+
+  /**
+   * Render the board background image (full canvas)
    */
   private renderBoard(display: IDisplay): void {
-    if (this.boardAsset) {
-      display.drawImage(
-        this.boardAsset.image,
-        BOARD_X,
-        0,
-        this.boardAsset.width,
-        this.boardAsset.height
-      );
+    // Lazy load if not available
+    if (!this.boardAsset) {
+      if (MakkoEngine.hasStaticAsset(BOARD_ASSET_NAME)) {
+        this.boardAsset = MakkoEngine.staticAsset(BOARD_ASSET_NAME);
+        console.log('[IdleScene] Board asset loaded on demand');
+      } else {
+        return;
+      }
     }
+
+    // Draw board filling the canvas (1920x1080)
+    display.drawImage(
+      this.boardAsset.image,
+      0,
+      0,
+      BOARD_WIDTH,
+      BOARD_HEIGHT
+    );
   }
 
   /**
@@ -311,7 +524,8 @@ export class IdleScene implements Scene {
       const visual = this.spaceshipVisuals.get(cell.definition.id);
       if (visual) {
         visual.render(display, {
-          selected: cell.selected
+          selected: cell.selected,
+          debug: this.debugMode
         });
       }
     }
@@ -616,6 +830,110 @@ export class IdleScene implements Scene {
       font: FONTS.smallFont,
       fill: COLORS.dimText,
       align: 'center'
+    });
+  }
+
+  /**
+   * DEBUG: Render node position debugger overlay
+   */
+  private renderDebugOverlay(display: IDisplay): void {
+    // Draw all CURRENT calibrated positions (from NODE_POSITIONS/HUB_CELLS) - YELLOW
+    for (let i = 0; i < 16; i++) {
+      const originalPos = NODE_POSITIONS[i];
+      
+      // Draw original position marker (yellow = what's currently saved)
+      display.drawCircle(originalPos.x, originalPos.y, 35, {
+        fill: '#ffff00',
+        alpha: 0.3
+      });
+      display.drawText(`${i}`, originalPos.x, originalPos.y + 50, {
+        font: '12px monospace',
+        fill: '#ffff00',
+        align: 'center'
+      });
+    }
+
+    // Draw all DEBUG positions (what you're placing) - GREEN/RED
+    for (let i = 0; i < 16; i++) {
+      const pos = this.debugPositions[i];
+      const isSelected = i === this.selectedNodeIndex;
+
+      // Draw position marker
+      display.drawCircle(pos.x, pos.y, isSelected ? 40 : 30, {
+        fill: isSelected ? '#ff0000' : '#00ff00',
+        alpha: 0.6
+      });
+
+      // Draw crosshair
+      display.drawLine(pos.x - 20, pos.y, pos.x + 20, pos.y, {
+        stroke: isSelected ? '#ffffff' : '#00ff00',
+        lineWidth: 2,
+        alpha: 0.8
+      });
+      display.drawLine(pos.x, pos.y - 20, pos.x, pos.y + 20, {
+        stroke: isSelected ? '#ffffff' : '#00ff00',
+        lineWidth: 2,
+        alpha: 0.8
+      });
+
+      // Draw node number
+      display.drawText(`${i}`, pos.x, pos.y, {
+        font: 'bold 20px monospace',
+        fill: '#ffffff',
+        align: 'center',
+        baseline: 'middle'
+      });
+    }
+
+    // Draw debug UI panel
+    const panelX = 20;
+    const panelY = 200;
+    const panelWidth = 300;
+    const panelHeight = 220;
+
+    display.drawRoundRect(panelX, panelY, panelWidth, panelHeight, 10, {
+      fill: '#000000',
+      alpha: 0.85
+    });
+    display.drawRoundRect(panelX, panelY, panelWidth, panelHeight, 10, {
+      stroke: '#00ff00',
+      lineWidth: 2
+    });
+
+    // Show current mouse position in both coordinate systems
+    const rawMouseX = MakkoEngine.input.mouseX;
+    const rawMouseY = MakkoEngine.input.mouseY;
+    let mouseInfo = '';
+    if (rawMouseX !== undefined && rawMouseY !== undefined) {
+      const gamePos = MakkoEngine.display.toGameCoords(rawMouseX, rawMouseY);
+      mouseInfo = `Mouse: raw(${rawMouseX}, ${rawMouseY}) game(${Math.round(gamePos.x)}, ${Math.round(gamePos.y)})`;
+    }
+
+    // Instructions
+    display.drawText('NODE DEBUGGER', panelX + 10, panelY + 25, {
+      font: 'bold 18px monospace',
+      fill: '#00ff00'
+    });
+
+    const instructions = [
+      `Selected: Node ${this.selectedNodeIndex}`,
+      `Position: (${Math.round(this.debugPositions[this.selectedNodeIndex].x)}, ${Math.round(this.debugPositions[this.selectedNodeIndex].y)})`,
+      mouseInfo,
+      '',
+      'Click: Place node',
+      '0-9: Select node 0-9',
+      'Shift+0-5: Select node 10-15',
+      'Arrows: Nudge (+Shift: 10px)',
+      'P: Print positions to console',
+      'R: Reset positions',
+      'D: Exit debugger'
+    ];
+
+    instructions.forEach((text, idx) => {
+      display.drawText(text, panelX + 10, panelY + 50 + idx * 16, {
+        font: '12px monospace',
+        fill: '#ffffff'
+      });
     });
   }
 

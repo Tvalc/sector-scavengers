@@ -20,6 +20,8 @@ export interface SpaceshipRenderOptions {
   selected?: boolean;
   /** Scale override (uses instance scale if not provided) */
   scale?: number;
+  /** Show debug visualization (anchor, hitbox) */
+  debug?: boolean;
 }
 
 /**
@@ -135,9 +137,7 @@ export class SpaceshipVisual {
   render(display: IDisplay, options?: SpaceshipRenderOptions): void {
     const scale = options?.scale ?? this.scale;
     const selected = options?.selected ?? false;
-
-    // Draw rarity glow circle
-    this.drawGlow(display, scale);
+    const debug = options?.debug ?? false;
 
     // Draw selection ring if selected
     if (selected) {
@@ -145,7 +145,7 @@ export class SpaceshipVisual {
     }
 
     // Draw spaceship sprite
-    this.drawSprite(display, scale);
+    this.drawSprite(display, scale, debug);
   }
 
   /**
@@ -169,6 +169,14 @@ export class SpaceshipVisual {
       if (this.character && this.character.isLoaded()) {
         this.character.play(ANIMATION_NAME, true);
         this.loaded = true;
+        
+        // Debug: Log character info
+        console.log('[SpaceshipVisual] Character loaded:', SPRITE_CHARACTER);
+        console.log('[SpaceshipVisual] Target position:', this.x, this.y);
+        const hitbox = this.character.getHitbox();
+        if (hitbox) {
+          console.log('[SpaceshipVisual] Hitbox:', JSON.stringify(hitbox));
+        }
       } else {
         // Character not available yet
         this.character = null;
@@ -209,16 +217,82 @@ export class SpaceshipVisual {
   /**
    * Draw the spaceship sprite
    */
-  private drawSprite(display: IDisplay, scale: number): void {
+  private drawSprite(display: IDisplay, scale: number, debug: boolean = false): void {
     if (!this.character || !this.loaded) {
       return;
     }
 
-    this.character.draw(display, this.x, this.y, {
-      scale: scale,
-      flipH: false,
-      flipV: false,
-      alpha: 1.0,
-    });
+    // Get hitbox to calculate proper centering
+    const hitbox = this.character.getHitbox();
+    
+    if (hitbox) {
+      // Calculate the offset needed to center the sprite's visual on our target position
+      // hitbox.x/y are the offset from anchor to top-left of bounding box
+      // We want the CENTER of the hitbox to be at (this.x, this.y)
+      const centerX = this.x - (hitbox.x + hitbox.width / 2) * scale;
+      const centerY = this.y - (hitbox.y + hitbox.height / 2) * scale;
+      
+      this.character.draw(display, centerX, centerY, {
+        scale: scale,
+        flipH: false,
+        flipV: false,
+        alpha: debug ? 0.7 : 1.0,  // Slightly transparent in debug mode
+      });
+
+      if (debug) {
+        // Draw where we're ACTUALLY drawing the character - WHITE X
+        display.drawLine(centerX - 15, centerY - 15, centerX + 15, centerY + 15, {
+          stroke: '#ffffff',
+          lineWidth: 3
+        });
+        display.drawLine(centerX + 15, centerY - 15, centerX - 15, centerY + 15, {
+          stroke: '#ffffff',
+          lineWidth: 3
+        });
+        
+        // Draw target position (node center) - CYAN circle
+        display.drawCircle(this.x, this.y, 20, {
+          stroke: '#00ffff',
+          lineWidth: 3,
+          alpha: 1.0
+        });
+        
+        // Draw hitbox at the adjusted position - YELLOW
+        const hbX = centerX + hitbox.x * scale;
+        const hbY = centerY + hitbox.y * scale;
+        const hbW = hitbox.width * scale;
+        const hbH = hitbox.height * scale;
+        
+        display.drawRect(hbX, hbY, hbW, hbH, {
+          stroke: '#ffff00',
+          lineWidth: 2,
+          alpha: 0.8
+        });
+        
+        // Draw hitbox center - GREEN (should overlap with CYAN target)
+        const hbCenterX = hbX + hbW / 2;
+        const hbCenterY = hbY + hbH / 2;
+        display.drawCircle(hbCenterX, hbCenterY, 6, {
+          fill: '#00ff00',
+          alpha: 1.0
+        });
+        
+        // Text label showing position info
+        display.drawText(`Target:(${Math.round(this.x)},${Math.round(this.y)}) Draw:(${Math.round(centerX)},${Math.round(centerY)})`, 
+          this.x, this.y + 50, {
+          font: '12px monospace',
+          fill: '#ffffff',
+          align: 'center'
+        });
+      }
+    } else {
+      // No hitbox, just draw at target
+      this.character.draw(display, this.x, this.y, {
+        scale: scale,
+        flipH: false,
+        flipV: false,
+        alpha: 1.0,
+      });
+    }
   }
 }

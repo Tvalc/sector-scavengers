@@ -53,43 +53,69 @@ interface RarityWeight {
 
 /**
  * Board layout configuration
- * SSSSBoards2 image (1350x1080) positioned at x=285
- * Cell positions tuned to match circular depressions on the board image
+ * SSSSSBoard image (1920x1080) - full canvas
  */
-const BOARD_X = 285;
-const BOARD_WIDTH = 1350;
-const BOARD_HEIGHT = 1080;
+export const BOARD_WIDTH = 1920;
+export const BOARD_HEIGHT = 1080;
+export const CENTER_X = 960;
+export const CENTER_Y = 540;
+export const CLICK_RADIUS = 70;
 
 /**
- * Cell positions on the board image
- * Tuned to match the 16 circular depressions on SSSSBoards2
- * Format: [startX, startY, horizontalSpacing, verticalSpacing]
+ * NODE_POSITIONS - Single source of truth for all node positions
+ * 
+ * These are screen coordinates for the 16 circle centers on SSSSSBoard board.
+ * Board is drawn at (0, 0) filling the full canvas (1920x1080).
+ * 
+ * Node ID layout (row-major):
+ *   0  1  2  3   (row 0, top of diamond)
+ *   4  5  6  7   (row 1)
+ *   8  9 10 11   (row 2)
+ *  12 13 14 15   (row 3, bottom of diamond)
+ * 
+ * Positions form an isometric diamond pattern matching the board's circular depressions.
+ * USE THE DEBUGGER (press 'D' in IdleScene) to calibrate these positions!
  */
-const CELL_START_X = 450;  // First column center X
-const CELL_START_Y = 165;  // First row center Y
-const CELL_SPACING_X = 225; // Horizontal spacing between cell centers
-const CELL_SPACING_Y = 235; // Vertical spacing between cell centers
-const DEFAULT_CLICK_RADIUS = 70;
+export const NODE_POSITIONS: Array<{ x: number; y: number }> = [
+  // Calibrated positions from debugger - SSSSSBoard (1920x1080)
+  { x: 965, y: 177 },  // 0 - top center
+  { x: 738, y: 298 },  // 1
+  { x: 529, y: 416 },  // 2
+  { x: 308, y: 537 },  // 3 - left edge
+  { x: 534, y: 659 },  // 4
+  { x: 753, y: 531 },  // 5
+  { x: 965, y: 425 },  // 6 - center
+  { x: 1170, y: 289 }, // 7
+  { x: 1396, y: 418 }, // 8
+  { x: 1168, y: 543 }, // 9
+  { x: 968, y: 651 },  // 10
+  { x: 746, y: 776 },  // 11
+  { x: 961, y: 886 },  // 12 - bottom center
+  { x: 1168, y: 778 }, // 13
+  { x: 1377, y: 659 }, // 14
+  { x: 1608, y: 530 }, // 15 - right edge
+];
 
 /**
- * 16 hub cell definitions arranged in a 4x4 grid
- * IDs go left-to-right, top-to-bottom (0-3 row 0, 4-7 row 1, etc.)
+ * 16 hub cell definitions
+ * Uses NODE_POSITIONS as the single source of truth
  */
-export const HUB_CELLS: HubCellDefinition[] = [];
+export const HUB_CELLS: HubCellDefinition[] = NODE_POSITIONS.map((pos, id) => ({
+  id,
+  centerX: pos.x,
+  centerY: pos.y,
+  clickRadius: CLICK_RADIUS,
+}));
 
-// Generate cell definitions based on actual board layout
-for (let row = 0; row < 4; row++) {
-  for (let col = 0; col < 4; col++) {
-    const id = row * 4 + col;
-    const centerX = CELL_START_X + col * CELL_SPACING_X;
-    const centerY = CELL_START_Y + row * CELL_SPACING_Y;
-    HUB_CELLS.push({
-      id,
-      centerX,
-      centerY,
-      clickRadius: DEFAULT_CLICK_RADIUS,
-    });
+/**
+ * Get screen position for a node by ID
+ * Single source of truth - same positions used for rendering and click detection
+ */
+export function getNodePosition(id: number): { x: number; y: number } {
+  if (id < 0 || id >= NODE_POSITIONS.length) {
+    return { x: CENTER_X, y: CENTER_Y };
   }
+  return NODE_POSITIONS[id];
 }
 
 /**

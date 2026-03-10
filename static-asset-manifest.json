@@ -170,6 +170,16 @@
         "height": 1080,
         "format": "png"
       }
+    },
+    "sssssboard": {
+      "url": "https://api.makko.ai/storage/v1/object/public/image-assets/0f84fe06-5c42-40c3-b563-1a28d18f37cc/background/1773100933562_background.png?t=1773101054155",
+      "name": "SSSSSBoard",
+      "asset_type": "background",
+      "metadata": {
+        "width": 1920,
+        "height": 1080,
+        "format": "png"
+      }
     }
   }
 }
