@@ -27,6 +27,8 @@ import { Mission } from '../types/mission';
 import { CrewMember } from '../types/crew';
 import { getItemById, Item } from '../types/items';
 import { addItem } from '../types/inventory';
+import { StoryState } from '../dialogue/story-state';
+import { signalLogSystem } from '../systems/signal-log-system';
 
 /**
  * Game flow states
@@ -68,6 +70,14 @@ interface SectorScavengersSave {
   unlockedCards: string[];
   crewRoster: CrewMember[];
   crewAssignments: Record<number, string>;
+  meta: {
+    debt: number;
+    debtCeiling: number;
+    currentSector: number;
+    paymentDue: number | null;
+    billingTimer: number;
+  };
+  storyState: { flags: string[]; variables: [string, number][] };
 }
 
 /**
@@ -88,6 +98,9 @@ export class Game {
   /** Persistent game state */
   public state: GameState;
   
+  /** Narrative story state for flags and variables */
+  public storyState: StoryState;
+  
   /** Save manager for persistence */
   private saveManager: SaveManager<SectorScavengersSave>;
   
@@ -96,6 +109,7 @@ export class Game {
 
   constructor() {
     this.state = createInitialState();
+    this.storyState = new StoryState();
     this.saveManager = new SaveManager<SectorScavengersSave>('sector-scavengers', 1);
     Game.instance = this;
     this.setupStateMachine();
@@ -297,6 +311,19 @@ export class Game {
     
     // Clear hub selection after dive ends
     this.clearHubSelectedShips();
+    
+    // Check for sector unlock on successful run completion
+    if (!run.collapsed) {
+      this.storyState.incrementMissionsCompleted();
+      const missionsCompleted = this.storyState.getMissionsCompleted();
+      
+      // Unlock sector every 3 completed missions
+      const nextSector = Math.floor(missionsCompleted / 3) + 2;
+      if (nextSector > this.state.meta.currentSector) {
+        this.checkSectorUnlock(nextSector);
+      }
+    }
+    
     this.stateMachine.transition(GameFlowStates.RESULTS, this);
   }
 
@@ -306,6 +333,39 @@ export class Game {
    */
   returnToIdle(): void {
     this.stateMachine.transition(GameFlowStates.IDLE, this);
+  }
+
+  /**
+   * Check and unlock new sectors based on progress
+   * Sectors unlock based on completed mission count milestones
+   * @param newSector The sector ID to potentially unlock
+   * @returns true if sector was unlocked
+   */
+  checkSectorUnlock(newSector: number): boolean {
+    // Only process valid sector IDs (2-7 are unlockable)
+    if (newSector < 2 || newSector > 7) return false;
+    
+    // Check if we already unlocked this sector
+    if (this.storyState.hasSectorUnlocked(newSector)) return false;
+    
+    // Check if this is the next sector in sequence
+    const currentSector = this.state.meta.currentSector;
+    if (newSector !== currentSector + 1) return false;
+    
+    // Mark as unlocked in story state
+    this.storyState.markSectorUnlocked(newSector);
+    
+    // Update current sector in meta state
+    this.state.meta.currentSector = newSector;
+    
+    // Broadcast to signal log
+    signalLogSystem.addBreakingNews(
+      `SECTOR UNLOCKED: Access granted to Sector ${newSector}. New salvage opportunities available.`
+    );
+    
+    console.log(`[Narrative] Sector unlocked: ${newSector}`);
+    
+    return true;
   }
 
   /**
@@ -499,7 +559,9 @@ export class Game {
       nextUnlockCardId: this.state.nextUnlockCardId,
       unlockedCards: this.state.unlockedCards,
       crewRoster: this.state.crewRoster,
-      crewAssignments: this.state.crewAssignments
+      crewAssignments: this.state.crewAssignments,
+      meta: this.state.meta,
+      storyState: this.storyState.toJSON()
     });
   }
 
@@ -565,14 +627,24 @@ export class Game {
       }
       
       // Meta progression
-      this.state.deathCurrency = saveData.deathCurrency ?? 0;
-      this.state.deckUnlockProgress = saveData.deckUnlockProgress ?? 0;
+      this.state.deathCurrency = saveData.deathCurrency ?? 1;
+      this.state.deckUnlockProgress = saveData.deckUnlockProgress ?? 1;
       this.state.nextUnlockCardId = saveData.nextUnlockCardId ?? null;
       this.state.unlockedCards = saveData.unlockedCards ?? [];
       
       // Crew progression
       this.state.crewRoster = saveData.crewRoster ?? [];
       this.state.crewAssignments = saveData.crewAssignments ?? {};
+      
+      // Meta state (debt, sector, billing)
+      if (saveData.meta && typeof saveData.meta === 'object') {
+        this.state.meta = saveData.meta;
+      }
+      
+      // Story state (narrative flags and variables)
+      if (saveData.storyState && typeof saveData.storyState === 'object') {
+        this.storyState.fromJSON(saveData.storyState);
+      }
       
       // Check viral multiplier expiry on load
       this.updateViralMultiplier();

@@ -7,6 +7,8 @@
 
 import { CrewMember, generateCrewMember } from '../types/crew';
 import { calculateWakeCost } from '../config/economy-config';
+import { signalLogSystem } from './signal-log-system';
+import type { StoryState } from '../dialogue/story-state';
 
 /**
  * Represents a cryo pod
@@ -87,11 +89,14 @@ function getRandomTier(): 1 | 2 | 3 {
  * @param pod - The cryo pod containing the crew member
  * @param availablePowerCells - Current power cell count
  * @param awakeCount - Number of currently awake crew (for cost calculation)
+ * @param storyState - Story state for tracking recruit introductions (optional)
+ * @returns Success status, message, and cost
  */
 export function wakeCrewMember(
   pod: CryoPod, 
   availablePowerCells: number,
-  awakeCount: number = 0
+  awakeCount: number = 0,
+  storyState?: StoryState
 ): { success: boolean; message: string; cost: number } {
   if (pod.crew.awake) {
     return { success: false, message: 'Crew member already awake', cost: 0 };
@@ -106,6 +111,22 @@ export function wakeCrewMember(
   
   // Wake the crew member
   pod.crew.awake = true;
+  
+  // Check if this is an authored recruit with story significance
+  if (pod.crew.isAuthored && pod.crew.authoredId && storyState) {
+    // Only broadcast if not already introduced
+    if (!storyState.hasRecruitBeenIntroduced(pod.crew.authoredId)) {
+      // Mark as introduced
+      storyState.markRecruitIntroduced(pod.crew.authoredId);
+      storyState.incrementRecruitsWoken();
+      
+      // Broadcast to signal log
+      const recruitName = pod.crew.name;
+      signalLogSystem.addBreakingNews(`CONTRACT SIGNED: ${recruitName} joins station roster. Debt: +150`);
+      
+      console.log(`[Narrative] Recruit arrived: ${recruitName} (${pod.crew.authoredId})`);
+    }
+  }
   
   return { success: true, message: `${pod.crew.name} awakened from cryo!`, cost: wakeCost };
 }

@@ -808,11 +808,11 @@ Every agent working on Phase 7 must do the following:
   - Reuse hub population and results flow where possible
   - No giant world-map scene yet
 
-- [ ] P7.9 - Narrative reactivity pass
+- [x] P7.9 - Narrative reactivity pass
   - Add debt warnings, recruit arrivals, and sector beats to existing narrative surfaces
   - Prefer signal log, results text, and lightweight hub reactions over a large new dialogue framework
 
-- [ ] P7.10 - Future-expansion cleanup
+- [x] P7.10 - Future-expansion cleanup
   - Confirm the implementation can scale
   - Document follow-up seams for doctrine, endings, and additional sectors
   - Avoid premature refactors
@@ -831,8 +831,8 @@ Use one line per completed task.
 | P7.6 | complete | src/types/crew.ts, src/systems/cryo-system.ts, src/ui/cryo-ui/frozen-card.ts, src/ui/cryo-ui/awake-card.ts | 1 | (pending commit) | Authored recruit types with bio field, createAuthoredCrewMember(), createAuthoredPod(), UI visual distinction with ★ badge and golden border |
 | P7.7 | complete | src/config/economy-config.ts, src/systems/cryo-system.ts, src/scenes/idle/cryo-handlers.ts, src/ui/cryo-ui/frozen-card.ts, src/ui/cryo-ui/panel.ts | 1 | (pending commit) | Authored recruits add 150 debt on wake, debt ceiling enforced, UI shows debt cost warnings and DEBT CAP indicator |
 | P7.8 | complete | src/config/economy-config.ts, src/game/game.ts, src/systems/idle-system.ts, src/systems/hub-system.ts, src/scenes/idle/index.ts, src/scenes/idle/render-ui.ts, src/scenes/results-scene.ts | 1 | (pending commit) | 3-sector progression with mission/debt unlock conditions, hub rarity weights vary by sector, sector displayed in debt panel and results |
-| P7.9 | pending |  |  |  |  |
-| P7.10 | pending |  |  |  |  |
+| P7.9 | complete | src/dialogue/story-state.ts, src/systems/idle-system.ts, src/systems/cryo-system.ts, src/game/game.ts, src/scenes/idle/render-ui.ts, src/scenes/idle/cryo-handlers.ts, src/scenes/results-scene.ts | 1 | (pending commit) | Narrative reactivity using existing surfaces (signal log, debt panel, results scene), story state tracks all narrative events |
+| P7.10 | complete | NARRATIVE_REWORK.md | 1 | (pending commit) | Architecture documentation added (crew source of truth, MetaState structure, StoryState structure, narrative surfaces, extension seams) |
 
 ### Phase 7 Changelog
 
@@ -1495,3 +1495,206 @@ Do **not** skip straight to sectors or named recruits before:
 - billing is in place
 
 That order is what keeps the Makko project from becoming brittle.
+
+
+
+## Phase 7 Architecture Notes
+
+This section documents the architectural decisions made during Phase 7 for future developers and agents.
+
+### Crew Source of Truth
+
+**Authoritative Source:** `game.state.cryoState.pods[*].crew`
+
+The live, mutable crew state is stored in the cryo system's pod array. Each `CryoPod` contains a `crew: CrewMember` object that tracks all crew properties including:
+- `id`, `name`, `role`, `stats`
+- `awake: boolean` (frozen vs awakened status)
+- `assignment: { type, targetId, roomIndex? }` (current assignment)
+- `experience`, `level`, `alive`
+- `isAuthored?: boolean`, `authoredId?: string`, `bio?: string` (for named recruits)
+
+**Deprecated Fields (DO NOT USE):**
+- `game.state.crewRoster: CrewMember[]` - Unused, kept for backward compatibility
+- `game.state.crewAssignments: Record<number, string>` - Unused, kept for backward compatibility
+
+**Why cryoState.pods is authoritative:**
+- Cryo pods are the acquisition surface for crew (waking from frozen state)
+- All crew manipulation happens through the cryo system
+- The pod array is the single source that survives save/load correctly
+- Using multiple sources would require synchronization and risk desync
+
+**Future crew work should:**
+1. Read crew from `game.state.cryoState.pods`
+2. Modify crew in-place within pods array
+3. Call `game.saveState()` after changes
+4. Never create parallel crew tracking systems
+
+**Files involved:**
+- `src/types/state.ts` - CryoState interface definition
+- `src/systems/cryo-system.ts` - Cryo pod management, wake/assign functions
+- `src/types/crew.ts` - CrewMember interface
+
+### Meta State Structure
+
+**Location:** `src/types/state.ts`
+
+```typescript
+interface MetaState {
+  debt: number;              // Current outstanding debt ($0-$1000 range)
+  debtCeiling: number;       // Maximum debt before game over ($1000)
+  currentSector: number;     // Current sector (1-7, starts at 1)
+  paymentDue: number | null; // Payment due timestamp (null if no payment pending)
+  billingTimer: number;      // Billing cycle timer in milliseconds
+}
+```
+
+**Access:** `game.state.meta`
+
+**Persistence:** Automatically saved/loaded via `game.saveState()` and `game.loadState()`
+
+**Key behaviors:**
+- Debt starts at 0, increases when waking authored recruits (+$150 each)
+- Debt decreases on successful EXTRACT runs (15% of rewards)
+- Debt ceiling enforced: cannot wake recruits if would exceed $1000 cap
+- Billing cycles processed in IdleSystem, announced via signal log
+- Sector progression tracked here, unlocked via mission completion milestones
+
+**Files involved:**
+- `src/types/state.ts` - MetaState interface
+- `src/game/game.ts` - Meta state initialization, save/load, sector unlock
+- `src/systems/idle-system.ts` - Billing cycle processing, debt threshold warnings
+- `src/config/economy-config.ts` - DEBT_CONFIG constants
+
+### Story State Structure
+
+**Location:** `src/dialogue/story-state.ts`
+
+The `StoryState` class manages narrative event tracking using flags (booleans) and variables (numbers).
+
+**Key narrative event tracking:**
+
+**Debt Threshold Flags:**
+- `debt_warning_80` - Player reached 80% debt capacity
+- `debt_warning_90` - Player reached 90% debt capacity
+- `debt_critical_100` - Player hit debt limit
+
+**Recruit Introduction Flags:**
+- `recruit_met_{authoredId}` - Named recruit has been introduced
+  - Example: `recruit_met_vera_chen`, `recruit_met_marcus_kim`
+
+**Sector Unlock Flags:**
+- `sector_unlocked_{sectorId}` - Sector has been unlocked
+  - Example: `sector_unlocked_2`, `sector_unlocked_3`
+
+**Milestone Variables:**
+- `debt_cycles_completed` - Number of billing cycles processed
+- `recruits_woken` - Total recruits awakened from cryo
+- `missions_completed_total` - Total depth dive missions completed
+
+**Helper methods:**
+- `markDebtThreshold(80 | 90 | 100)` - Mark threshold as announced
+- `hasDebtThresholdBeenAnnounced(threshold)` - Check if already announced
+- `markRecruitIntroduced(authoredId)` - Mark recruit as met
+- `hasRecruitBeenIntroduced(authoredId)` - Check if already met
+- `markSectorUnlocked(sectorId)` - Mark sector as unlocked
+- `hasSectorUnlocked(sectorId)` - Check if already unlocked
+- `incrementDebtCycles()`, `incrementRecruitsWoken()`, `incrementMissionsCompleted()`
+
+**Access:** `game.storyState`
+
+**Persistence:** Serialized via `storyState.toJSON()`, deserialized via `storyState.fromJSON(data)`
+
+**Usage pattern:**
+```typescript
+// Check before broadcasting to prevent spam
+if (!game.storyState.hasDebtThresholdBeenAnnounced(80)) {
+  game.storyState.markDebtThreshold(80);
+  signalLogSystem.addBreakingNews('DEBT WARNING: Station operating at 80% credit limit');
+}
+```
+
+### Narrative Surfaces
+
+Phase 7 uses existing surfaces for narrative delivery - no new dialogue framework was introduced.
+
+#### 1. Signal Log
+**Location:** `src/systems/signal-log-system.ts`
+
+Scrolling ticker at bottom of screen broadcasting network transmissions.
+
+**Broadcasting:**
+```typescript
+signalLogSystem.addBreakingNews('MESSAGE TEXT');
+```
+
+**Used for:**
+- Debt threshold warnings (80%, 90%, 100%)
+- Billing cycle statements ("BILLING CYCLE: Payment of $X processed")
+- Recruit arrival announcements ("CONTRACT SIGNED: {name} joins station roster")
+- Sector unlock announcements ("SECTOR UNLOCKED: Access granted to Sector {n}")
+
+**Format:** "⚠️ {message} ⚠️" with cyan text
+
+#### 2. Results Scene
+**Location:** `src/scenes/results-scene.ts`
+
+End-of-run summary displayed after each depth dive.
+
+**Success state displays:**
+- "Operating in Sector {n}" (sector narrative)
+- "Debt serviced: -{X}" (if debt was paid down)
+- Salvaged ships breakdown
+- Total rewards
+- Rounds completed
+
+**Collapse state displays:**
+- "HULL BREACH" title in red
+- "Operating in Sector {n}" (sector narrative)
+- "All rewards lost to the void..."
+- "Crew lost. Momentum stalled. The debt remains." (narrative context)
+- Meta progression (scrap earned, deck unlock progress)
+
+#### 3. Debt Panel
+**Location:** `src/scenes/idle/render-ui.ts` → `renderDebtPanel()`
+
+Display-only panel in idle hub showing debt state.
+
+**Position:** (30, 180) - below energy and viral multiplier badges
+
+**Displays:**
+- Debt amount formatted ($100K, $1.5M)
+- Progress bar showing debt/ceiling ratio
+- Contextual warnings:
+  - Normal (<70%): Green bar, no message
+  - Warning (70-90%): Yellow bar, "Credit strain detected."
+  - Critical (>90%): Red bar, "Expansion restricted."
+
+**Visual feedback:**
+- Warning state: Yellow color scheme
+- Critical state: Red color scheme with warning indicator
+
+### Extension Seams for Future Work
+
+**Adding more recruits:**
+1. Define in `AUTHORED_RECRUITS` array (`src/types/crew.ts`)
+2. Add bio, role, and unique authoredId
+3. Use `createAuthoredPod()` to add to cryo state
+4. Story state automatically tracks via `recruit_met_{authoredId}` flag
+
+**Adding more sectors:**
+1. Extend `SECTOR_CONFIG` in `src/config/economy-config.ts`
+2. Define unlock conditions and rarity weights
+3. Update `checkSectorUnlock()` in `game.ts` if unlock formula changes
+4. Story state automatically tracks via `sector_unlocked_{sectorId}` flag
+
+**Adding doctrine/operating model:**
+1. Extend `MetaState` interface with doctrine field
+2. Add doctrine-specific bonuses/penalties to game systems
+3. Surface in UI via debt panel or dedicated doctrine panel
+
+**Adding endings:**
+1. Track ending conditions in story state (variables/flags)
+2. Create ending scenes or integrate into results scene
+3. Add ending checkpoints to run completion logic
+
+**Key principle:** All narrative state goes through StoryState. All crew state goes through cryoState.pods. All meta state goes through game.state.meta. Keep these three sources authoritative and avoid duplication.

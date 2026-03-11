@@ -54,6 +54,10 @@ export interface CrewMember {
   level: number;
   /** Whether crew member is alive (can be lost on death) */
   alive: boolean;
+  /** Whether this is a named story character */
+  isAuthored?: boolean;
+  /** Unique identifier for story tracking (e.g., "vera_chen") */
+  authoredId?: string;
 }
 
 /**

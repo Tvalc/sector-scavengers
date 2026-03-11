@@ -230,6 +230,116 @@
         "height": 1080,
         "format": "png"
       }
+    },
+    "get_to_da_airlock": {
+      "url": "https://api.makko.ai/storage/v1/object/public/image-assets/0f84fe06-5c42-40c3-b563-1a28d18f37cc/prop/1773177330208_prop.png?t=1773209640070",
+      "name": "Get to da Airlock",
+      "asset_type": "prop",
+      "metadata": {
+        "width": 831,
+        "height": 826,
+        "format": "png"
+      }
+    },
+    "ss-tactic-card-scavenge-prop": {
+      "url": "https://api.makko.ai/storage/v1/object/public/image-assets/0f84fe06-5c42-40c3-b563-1a28d18f37cc/prop/SS-Tactic-Card-Scavenge-Prop_1773205006284.png?t=1773209685476",
+      "name": "SS-Tactic-Card-Scavenge-Prop",
+      "asset_type": "prop",
+      "metadata": {
+        "width": 412,
+        "height": 618,
+        "format": "png"
+      }
+    },
+    "ss-tactic-card-repair": {
+      "url": "https://api.makko.ai/storage/v1/object/public/image-assets/0f84fe06-5c42-40c3-b563-1a28d18f37cc/prop/SS-Tactic-Card-Repair_1773206945670.png?t=1773209687067",
+      "name": "SS-Tactic-Card-Repair",
+      "asset_type": "prop",
+      "metadata": {
+        "width": 413,
+        "height": 629,
+        "format": "png"
+      }
+    },
+    "ss-card-tactic-risky-scavenge": {
+      "url": "https://api.makko.ai/storage/v1/object/public/image-assets/0f84fe06-5c42-40c3-b563-1a28d18f37cc/prop/SS-Card-Tactic-Risky-Scavenge_1773207467383.png?t=1773209690301",
+      "name": "SS-Card-Tactic-Risky-Scavenge",
+      "asset_type": "prop",
+      "metadata": {
+        "width": 414,
+        "height": 618,
+        "format": "png"
+      }
+    },
+    "ss-card-tactic-cautious-scavenge": {
+      "url": "https://api.makko.ai/storage/v1/object/public/image-assets/0f84fe06-5c42-40c3-b563-1a28d18f37cc/prop/SS-Card-Tactic-Cautious-Scavenge_1773207563106.png?t=1773209691369",
+      "name": "SS-Card-Tactic-Cautious-Scavenge",
+      "asset_type": "prop",
+      "metadata": {
+        "width": 663,
+        "height": 698,
+        "format": "png"
+      }
+    },
+    "ss-card-tactic-deep-scan": {
+      "url": "https://api.makko.ai/storage/v1/object/public/image-assets/0f84fe06-5c42-40c3-b563-1a28d18f37cc/prop/SS-Card-Tactic-Deep-Scan_1773207791626.png?t=1773209701170",
+      "name": "SS-Card-Tactic-Deep-Scan",
+      "asset_type": "prop",
+      "metadata": {
+        "width": 424,
+        "height": 625,
+        "format": "png"
+      }
+    },
+    "ss-card-tactic-extract": {
+      "url": "https://api.makko.ai/storage/v1/object/public/image-assets/0f84fe06-5c42-40c3-b563-1a28d18f37cc/prop/SS-Card-Tactic-Extract_1773207719372.png?t=1773209705285",
+      "name": "SS-Card-Tactic-Extract",
+      "asset_type": "prop",
+      "metadata": {
+        "width": 416,
+        "height": 615,
+        "format": "png"
+      }
+    },
+    "ss-card-tactic-rush-scavenge": {
+      "url": "https://api.makko.ai/storage/v1/object/public/image-assets/0f84fe06-5c42-40c3-b563-1a28d18f37cc/prop/SS-Card-Tactic-Rush-Scavenge_1773207828713.png?t=1773210005644",
+      "name": "SS-Card-Tactic-Rush-Scavenge",
+      "asset_type": "prop",
+      "metadata": {
+        "width": 415,
+        "height": 620,
+        "format": "png"
+      }
+    },
+    "ss-card-tactic-reinforce-v2": {
+      "url": "https://api.makko.ai/storage/v1/object/public/image-assets/0f84fe06-5c42-40c3-b563-1a28d18f37cc/prop/SS-Card-Tactic-Reinforce-V2_1773208473600.png?t=1773209716801",
+      "name": "SS-Card-Tactic-Reinforce-V2",
+      "asset_type": "prop",
+      "metadata": {
+        "width": 415,
+        "height": 623,
+        "format": "png"
+      }
+    },
+    "ss-card-tactic-salvage-parts": {
+      "url": "https://api.makko.ai/storage/v1/object/public/image-assets/0f84fe06-5c42-40c3-b563-1a28d18f37cc/prop/SS-Card-Tactic-Salvage-Parts_1773209567856.png?t=1773210009316",
+      "name": "SS-Card-Tactic-Salvage-Parts",
+      "asset_type": "prop",
+      "metadata": {
+        "width": 413,
+        "height": 618,
+        "format": "png"
+      }
+    },
+    "ss-card-tactic-patch-and-hold": {
+      "url": "https://api.makko.ai/storage/v1/object/public/image-assets/0f84fe06-5c42-40c3-b563-1a28d18f37cc/prop/SS-Card-Tactic-Patch-And-Hold_1773209681270.png?t=1773210010644",
+      "name": "SS-Card-Tactic-Patch-And-Hold",
+      "asset_type": "prop",
+      "metadata": {
+        "width": 413,
+        "height": 618,
+        "format": "png"
+      }
     }
   }
 }

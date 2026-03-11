@@ -100,7 +100,7 @@ export function handleWakeCrew(game: Game, crewId: string): void {
   const powerCells = game.state.resources.powerCells;
   const awakeCount = cryoState.awakenedCount;
   
-  const result = wakeCrewMember(pod, powerCells, awakeCount);
+  const result = wakeCrewMember(pod, powerCells, awakeCount, game.storyState);
   
   if (result.success) {
     game.state.resources.powerCells -= result.cost;

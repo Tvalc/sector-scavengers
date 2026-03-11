@@ -4,12 +4,38 @@
  * Tracks story flags (boolean) and variables (numeric) for branching narratives.
  * Supports condition evaluation for dialogue choices.
  *
+ * Narrative Event Types:
+ *
+ * Debt Threshold Flags:
+ * - debt_warning_80: Player reached 80% debt capacity
+ * - debt_warning_90: Player reached 90% debt capacity
+ * - debt_critical_100: Player hit debt limit (game over threshold)
+ *
+ * Recruit Introduction Flags:
+ * - recruit_met_{authoredId}: Named recruit has been introduced
+ *   e.g., recruit_met_vera_chen, recruit_met_marcus_kim
+ *
+ * Sector Unlock Flags:
+ * - sector_unlocked_{sectorId}: Sector has been unlocked
+ *   e.g., sector_unlocked_2, sector_unlocked_3
+ *
+ * Milestone Variables:
+ * - debt_cycles_completed: Number of billing cycles processed
+ * - recruits_woken: Total recruits awakened from cryo
+ * - missions_completed_total: Total depth dive missions completed
+ *
  * Usage:
  *   const story = new StoryState();
  *   story.setFlag('met_wizard');
  *   story.setVariable('reputation', 10);
  *   if (story.evaluate('flag:met_wizard')) { ... }
  *   if (story.evaluate('var:reputation>=5')) { ... }
+ *
+ *   // Narrative helpers:
+ *   story.markDebtThreshold(80);
+ *   story.markRecruitIntroduced('vera_chen');
+ *   story.markSectorUnlocked(2);
+ *   story.incrementDebtCycles();
  */
 
 /**
@@ -152,6 +178,102 @@ export class StoryState {
       default:
         return false;
     }
+  }
+
+  // ============================================================================
+  // Narrative Event Helpers
+  // ============================================================================
+
+  /**
+   * Mark a debt threshold as announced
+   * Sets flags: debt_warning_80, debt_warning_90, debt_critical_100
+   */
+  markDebtThreshold(threshold: 80 | 90 | 100): void {
+    if (threshold === 80) this.setFlag('debt_warning_80');
+    else if (threshold === 90) this.setFlag('debt_warning_90');
+    else if (threshold === 100) this.setFlag('debt_critical_100');
+  }
+
+  /**
+   * Check if a debt threshold has been announced
+   */
+  hasDebtThresholdBeenAnnounced(threshold: 80 | 90 | 100): boolean {
+    if (threshold === 80) return this.hasFlag('debt_warning_80');
+    if (threshold === 90) return this.hasFlag('debt_warning_90');
+    if (threshold === 100) return this.hasFlag('debt_critical_100');
+    return false;
+  }
+
+  /**
+   * Mark a recruit as introduced
+   * Sets flag: recruit_met_{authoredId}
+   */
+  markRecruitIntroduced(authoredId: string): void {
+    this.setFlag(`recruit_met_${authoredId}`);
+  }
+
+  /**
+   * Check if a recruit has been introduced
+   */
+  hasRecruitBeenIntroduced(authoredId: string): boolean {
+    return this.hasFlag(`recruit_met_${authoredId}`);
+  }
+
+  /**
+   * Mark a sector as unlocked
+   * Sets flag: sector_unlocked_{sectorId}
+   */
+  markSectorUnlocked(sectorId: number): void {
+    this.setFlag(`sector_unlocked_${sectorId}`);
+  }
+
+  /**
+   * Check if a sector has been unlocked
+   */
+  hasSectorUnlocked(sectorId: number): boolean {
+    return this.hasFlag(`sector_unlocked_${sectorId}`);
+  }
+
+  /**
+   * Increment debt cycles completed counter
+   */
+  incrementDebtCycles(): void {
+    this.incrementVariable('debt_cycles_completed');
+  }
+
+  /**
+   * Increment recruits woken counter
+   */
+  incrementRecruitsWoken(): void {
+    this.incrementVariable('recruits_woken');
+  }
+
+  /**
+   * Increment total missions completed counter
+   */
+  incrementMissionsCompleted(): void {
+    this.incrementVariable('missions_completed_total');
+  }
+
+  /**
+   * Get total debt cycles completed
+   */
+  getDebtCyclesCompleted(): number {
+    return this.getVariable('debt_cycles_completed');
+  }
+
+  /**
+   * Get total recruits woken
+   */
+  getRecruitsWoken(): number {
+    return this.getVariable('recruits_woken');
+  }
+
+  /**
+   * Get total missions completed
+   */
+  getMissionsCompleted(): number {
+    return this.getVariable('missions_completed_total');
   }
 
   // ============================================================================

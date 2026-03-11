@@ -269,10 +269,26 @@ export class ResultsScene implements Scene {
       alpha: 0.5
     });
 
+    // Current sector display
+    const currentSector = this.game.state.meta.currentSector;
+    display.drawText(`Operating in Sector ${currentSector}`, width / 2, 350, {
+      font: FONTS.labelFont,
+      fill: COLORS.warningYellow,
+      align: 'center'
+    });
+    
     // Collapse message
     display.drawText('All rewards lost to the void...', width / 2, 400, {
       font: FONTS.headingFont,
       fill: COLORS.dimText,
+      align: 'center'
+    });
+    
+    // Narrative context for collapse
+    display.drawText('Crew lost. Momentum stalled. The debt remains.', width / 2, 425, {
+      font: FONTS.bodyFont,
+      fill: COLORS.warningYellow,
+      alpha: 0.8,
       align: 'center'
     });
 
@@ -394,6 +410,26 @@ export class ResultsScene implements Scene {
       fill: COLORS.dimText,
       align: 'center'
     });
+    
+    // Current sector display
+    lineY += 30;
+    const currentSector = this.game.state.meta.currentSector;
+    display.drawText(`Operating in Sector ${currentSector}`, width / 2, lineY, {
+      font: FONTS.labelFont,
+      fill: COLORS.neonCyan,
+      align: 'center'
+    });
+    
+    // Debt service message (narrative context for debt payment)
+    lineY += 35;
+    const debtServiced = run ? Math.floor(run.extractedRewards * 0.1) : 0; // 10% of rewards go to debt
+    if (debtServiced > 0) {
+      display.drawText(`Debt serviced: -${debtServiced}`, width / 2, lineY, {
+        font: FONTS.smallFont,
+        fill: COLORS.warningYellow,
+        align: 'center'
+      });
+    }
   }
 
   private renderMultiplierStatus(display: typeof MakkoEngine.display): void {

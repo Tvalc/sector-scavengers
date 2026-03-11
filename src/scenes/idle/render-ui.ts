@@ -309,6 +309,86 @@ export class UIRenderer {
     }
   }
 
+  /** Render debt panel with contextual warnings */
+  renderDebtPanel(display: IDisplay, debt: number, debtCeiling: number): void {
+    const panelX = 30;
+    const panelY = 180;
+    const panelWidth = 220;
+    const panelHeight = 60;
+    const barHeight = 8;
+    const barY = panelY + 38;
+
+    const percentage = debt / debtCeiling;
+    const barWidth = panelWidth - LAYOUT.padding * 2;
+
+    // Panel background
+    display.drawRoundRect(panelX, panelY, panelWidth, panelHeight, LAYOUT.borderRadius, {
+      fill: COLORS.panelBg,
+      alpha: 0.9
+    });
+    display.drawRoundRect(panelX, panelY, panelWidth, panelHeight, LAYOUT.borderRadius, {
+      stroke: COLORS.border,
+      lineWidth: LAYOUT.borderWidth,
+      alpha: 0.5
+    });
+
+    // Debt label
+    display.drawText('DEBT', panelX + LAYOUT.padding, panelY + 20, {
+      font: FONTS.tinyFont,
+      fill: COLORS.dimText
+    });
+
+    // Debt amount
+    const formattedDebt = this.formatDebt(debt);
+    display.drawText(formattedDebt, panelX + panelWidth - LAYOUT.padding, panelY + 20, {
+      font: FONTS.smallFont,
+      fill: COLORS.white,
+      align: 'right'
+    });
+
+    // Progress bar background
+    display.drawRoundRect(panelX + LAYOUT.padding, barY, barWidth, barHeight, LAYOUT.borderRadiusSmall, {
+      fill: COLORS.neutralGray,
+      alpha: 0.5
+    });
+
+    // Progress bar fill
+    const fillWidth = Math.max(4, barWidth * Math.min(1, percentage));
+    let barColor: string = COLORS.successGreen;
+    let message = '';
+
+    if (percentage > 0.9) {
+      barColor = COLORS.warningRed;
+      message = 'Expansion restricted.';
+    } else if (percentage > 0.7) {
+      barColor = COLORS.warningYellow;
+      message = 'Credit strain detected.';
+    }
+
+    display.drawRoundRect(panelX + LAYOUT.padding, barY, fillWidth, barHeight, LAYOUT.borderRadiusSmall, {
+      fill: barColor,
+      alpha: 0.8
+    });
+
+    // Contextual warning message
+    if (message) {
+      display.drawText(message, panelX + LAYOUT.padding, panelY + 55, {
+        font: FONTS.tinyFont,
+        fill: barColor
+      });
+    }
+  }
+
+  /** Format debt number for display */
+  private formatDebt(debt: number): string {
+    if (debt >= 1000000) {
+      return `${(debt / 1000000).toFixed(1)}M`;
+    } else if (debt >= 1000) {
+      return `${(debt / 1000).toFixed(0)}K`;
+    }
+    return `${debt}`;
+  }
+
   /** Render viral multiplier badge */
   renderViralMultiplierBadge(display: IDisplay, socialSystem: SocialMultiplierSystem): void {
     const status = socialSystem.getStatus();

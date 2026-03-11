@@ -277,6 +277,13 @@ export class IdleScene implements Scene {
       this.uiRenderer.renderEfficiencyBonus(display, this.game.state.cryoState);
     }
     
+    // Debt panel
+    this.uiRenderer.renderDebtPanel(
+      display,
+      this.game.state.meta.debt,
+      this.game.state.meta.debtCeiling
+    );
+    
     this.uiRenderer.renderViralMultiplierBadge(display, this.socialMultiplierSystem);
     this.uiRenderer.renderDiveButton(display, this.hubSystem.getSelectedCount());
     this.uiRenderer.renderCrewButton(display, this.isCrewButtonHovered());

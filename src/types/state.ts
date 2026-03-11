@@ -47,6 +47,35 @@ export function createRunState(): RunState {
 }
 
 /**
+ * Meta state for debt and sector progression
+ */
+export interface MetaState {
+  /** Current debt owed */
+  debt: number;
+  /** Maximum debt before game over */
+  debtCeiling: number;
+  /** Current sector (1-7) */
+  currentSector: number;
+  /** Payment due timestamp (null if no payment pending) */
+  paymentDue: number | null;
+  /** Billing cycle timer in milliseconds */
+  billingTimer: number;
+}
+
+/**
+ * Creates initial meta state
+ */
+export function createMetaState(): MetaState {
+  return {
+    debt: 100000, // Start with $100k debt
+    debtCeiling: 1000000, // $1M ceiling
+    currentSector: 1,
+    paymentDue: null,
+    billingTimer: 0,
+  };
+}
+
+/**
  * Global game state
  */
 export interface GameState {
@@ -96,6 +125,8 @@ export interface GameState {
   nextUnlockCardId: string | null;
   /** Meta progression: unlocked card IDs */
   unlockedCards: string[];
+  /** Meta state: debt, sector, billing */
+  meta: MetaState;
   /** 
    * Ship claim progress: ship ID → progress count
    * Tracks repairs and run completions toward claim threshold
@@ -158,7 +189,8 @@ export function createInitialState(): GameState {
     deathCurrency: 0,
     deckUnlockProgress: 0,
     nextUnlockCardId: null,
-    unlockedCards: []
+    unlockedCards: [],
+    meta: createMetaState()
   };
  }
 
