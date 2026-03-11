@@ -673,3 +673,825 @@ Power Cells are a RARE and PRECIOUS resource obtained through risky scavenging (
 - Updated all systems
 - Updated all scenes and UI
 - Build succeeds with no errors
+
+---
+
+## Phase 7: Makko-Safe Expansion Roadmap
+
+**Status:** READY FOR EXECUTION
+
+### Goal
+
+Implement the debt-driven macro loop, named recruitable leads, sector progression, and narrative reactivity without destabilizing the live Makko game architecture.
+
+This phase is intentionally designed to:
+
+- touch as few files as possible
+- prefer existing hot-path files over unused abstractions
+- record progress inside this document so another agent can resume if execution freezes
+- keep future expansion possible once the first safe version is in
+
+### Makko / Project Constraints To Respect
+
+These are the current architectural realities of the project and should shape all implementation prompts:
+
+1. **The live game is driven by one mutable `Game.state`**
+   - Primary hot path:
+     - `src/types/state.ts`
+     - `src/game/game.ts`
+
+2. **Save/load is manual**
+   - Any new persistent field must be added to:
+     - runtime state in `src/types/state.ts`
+     - save interface in `src/game/game.ts`
+     - `saveState()` in `src/game/game.ts`
+     - `loadState()` in `src/game/game.ts`
+   - If save shape changes materially, bump save version and wire migration.
+
+3. **The real scene pattern is scene-local and imperative**
+   - Use existing active scenes:
+     - `src/scenes/idle/index.ts`
+     - `src/scenes/depth-dive-scene.ts`
+     - `src/scenes/results-scene.ts`
+     - `src/scenes/start-scene.ts`
+   - Avoid building major features on `BaseScene`, `SystemRegistry`, or other half-unused abstractions.
+
+4. **UI is fixed-layout, immediate-mode, and manually hit-tested**
+   - Preferred UI extension points:
+     - `src/scenes/idle/render-ui.ts`
+     - `src/scenes/idle/input-handler.ts`
+     - existing cryo and mission UI modules
+   - Do not introduce a new UI framework.
+
+5. **Crew currently has split ownership**
+   - Prefer `cryoState.pods[*].crew` as the live source of truth.
+   - Do not deepen reliance on `crewRoster` unless first unified.
+
+6. **Avoid using disconnected systems as if they are live foundations**
+   - Treat these as reference only unless explicitly brought back into the hot path:
+     - `src/systems/node-system.ts`
+     - `src/systems/spacecraft-system.ts`
+     - `src/systems/room-system.ts`
+     - `src/scene/base-scene.ts`
+     - `src/scene/system-registry.ts`
+
+7. **Prefer extending existing files before creating new ones**
+   - New files are only justified if an existing live file becomes unmanageably large.
+
+### Execution Protocol
+
+Every agent working on Phase 7 must do the following:
+
+1. Read these files first:
+   - `NARRATIVE_REWORK.md`
+   - `CHARACTER_BIBLE.md`
+   - `DEBT_LOOP_AND_SECTOR_ARC.md`
+   - `src/types/state.ts`
+   - `src/game/game.ts`
+
+2. Before editing, identify the minimum existing files needed.
+
+3. After completing the task:
+   - mark the task checkbox below
+   - update the **Phase 7 Task Log**
+   - add a short note to the **Phase 7 Changelog**
+   - include changed file paths
+   - include the commit hash if a commit was made
+   - list any open risks or incomplete follow-ups
+
+4. If a save schema changed:
+   - note the save version change in the log
+   - document migration behavior in the changelog entry
+
+5. If execution freezes:
+   - the next agent should resume from this section and continue from the first unchecked task or the last incomplete log entry
+
+### Phase 7 Task Checklist
+
+- [x] P7.1 - Persistence hardening and source-of-truth cleanup
+  - Save missing runtime fields that already matter
+  - Decide crew source of truth and reduce split ownership
+  - Do not expand features yet; stabilize the hot path
+
+- [x] P7.2 - Debt/meta state scaffold
+  - Add debt, debt ceiling, payment due, billing timer, current sector, and doctrine scaffolding
+  - Persist all fields safely
+  - Add no major gameplay logic yet
+
+- [x] P7.3 - Debt HUD and statement visibility
+  - Surface debt state in the idle hub UI
+  - Add countdown/statement visibility without overhauling layout
+  - Keep to existing `render-ui.ts` / idle scene structure
+
+- [x] P7.4 - Billing cycle processor
+  - Implement cycle rollover and due payments
+  - Use existing time patterns compatible with save/load
+  - Keep logic centralized rather than scattered across card actions
+
+- [x] P7.5 - Run outcome integration
+  - Make run earnings feed the debt loop
+  - Show debt-relevant outcomes in results and/or signal log
+  - Keep `tactic-card-system.ts` changes focused and minimal
+
+- [x] P7.6 - Named recruit skeleton in cryo flow
+  - Add authored recruit metadata
+  - Reuse cryo as the recruit acquisition surface
+  - Avoid adding a new recruit scene
+
+- [x] P7.7 - Debt-gated recruit waking
+  - Waking named recruits adds debt
+  - Enforce debt ceiling rules cleanly
+  - Make the player feel the cost of bringing people into the station
+
+- [x] P7.8 - Sector progression shell
+  - Add current sector and minimal unlock/progression scaffolding
+  - Reuse hub population and results flow where possible
+  - No giant world-map scene yet
+
+- [ ] P7.9 - Narrative reactivity pass
+  - Add debt warnings, recruit arrivals, and sector beats to existing narrative surfaces
+  - Prefer signal log, results text, and lightweight hub reactions over a large new dialogue framework
+
+- [ ] P7.10 - Future-expansion cleanup
+  - Confirm the implementation can scale
+  - Document follow-up seams for doctrine, endings, and additional sectors
+  - Avoid premature refactors
+
+### Phase 7 Task Log
+
+Use one line per completed task.
+
+| Task | Status | Changed Files | Save Version | Commit | Notes / Risks |
+| --- | --- | --- | --- | --- | --- |
+| P7.1 | complete | src/types/state.ts, src/game/game.ts, src/systems/tactic-card-system.ts, src/systems/cryo-system.ts | 1 | (pending commit) | Fixed crew source of truth bug (cryoState.pods is source), added shipClaimProgress persistence, added recalculateAwakenedCount() safety validation |
+| P7.2 | complete | src/types/state.ts, src/game/game.ts | 1 | (pending commit) | Additive meta state scaffold with debt/sector/doctrine fields, backward compatible |
+| P7.3 | complete | src/scenes/idle/render-ui.ts, src/scenes/idle/index.ts | 1 | (pending commit) | Debt panel rendering with warning visuals, positioned at (30, 180) below existing UI, no overlap or hit-test issues |
+| P7.4 | complete | src/systems/idle-system.ts, src/game/game.ts | 1 | (pending commit) | Centralized billing in IdleSystem, timestamp-based processing, offline catchup, signal log hooks |
+| P7.5 | complete | src/game/game.ts, src/scenes/results-scene.ts, src/types/state.ts | 1 | (pending commit) | Debt consequences on run completion, results scene displays impact |
+| P7.6 | complete | src/types/crew.ts, src/systems/cryo-system.ts, src/ui/cryo-ui/frozen-card.ts, src/ui/cryo-ui/awake-card.ts | 1 | (pending commit) | Authored recruit types with bio field, createAuthoredCrewMember(), createAuthoredPod(), UI visual distinction with ★ badge and golden border |
+| P7.7 | complete | src/config/economy-config.ts, src/systems/cryo-system.ts, src/scenes/idle/cryo-handlers.ts, src/ui/cryo-ui/frozen-card.ts, src/ui/cryo-ui/panel.ts | 1 | (pending commit) | Authored recruits add 150 debt on wake, debt ceiling enforced, UI shows debt cost warnings and DEBT CAP indicator |
+| P7.8 | complete | src/config/economy-config.ts, src/game/game.ts, src/systems/idle-system.ts, src/systems/hub-system.ts, src/scenes/idle/index.ts, src/scenes/idle/render-ui.ts, src/scenes/results-scene.ts | 1 | (pending commit) | 3-sector progression with mission/debt unlock conditions, hub rarity weights vary by sector, sector displayed in debt panel and results |
+| P7.9 | pending |  |  |  |  |
+| P7.10 | pending |  |  |  |  |
+
+### Phase 7 Changelog
+
+### 2025-01-XX - P7.5 Complete: Run Outcome Integration
+**Summary:**
+- Run outcomes now affect debt progression with clear consequence formulas
+- Successful EXTRACT: 15% of extracted rewards reduces debt
+- Run completion bonus (all 10 rounds): extra 25 debt reduction
+- Death/collapse: 25 debt penalty (momentum loss)
+- Debt never goes below 0 (floor at 0)
+- Signal log announces major financial events (>50 reduction or any penalty)
+- Results scene displays debt impact in both success and collapse states
+- Console logging for debugging: [Debt] Run consequence: +X/-Y debt (reason)
+
+**Changed Files:**
+- src/types/state.ts - Added debtChange field to RunState
+- src/game/game.ts - Added applyDebtConsequences() method, integrated signal log system
+- src/scenes/results-scene.ts - Added debt service display in success state, penalty display in collapse state
+
+**Validation:**
+- Build succeeds (TypeScript compiles with no errors)
+- Debt calculations applied correctly based on run outcome
+- Results scene displays debt changes without overlapping existing UI
+- Signal log receives breaking news for significant debt events
+- No save version bump needed (debtChange is optional field, backward compatible)
+
+**Risks:**
+- None identified. All debt logic centralized in Game.endDepthDive() for maintainability.
+
+### 2025-01-XX - P7.4 Complete: Billing Cycle Processor
+**Summary:**
+- Extended IdleSystem with centralized billing cycle processing logic
+- Timestamp-based processing survives save/load correctly
+- Payment calculation formula: base 50 + 10% of current debt (capped 50-200)
+- Cycle rollover sets nextBillingTimestamp to 7 days in future
+- Overdue detection when debt >= debt ceiling
+- Signal log receives billing events via addBreakingNews()
+- Offline processing handles all missed billing cycles on load
+- Console logging for debugging: [Billing] Cycle processed, [Billing] Loaded with X cycle(s) to process
+
+**Changed Files:**
+- src/systems/idle-system.ts - Added billing cycle constants, processBillingCycles(), processBillingCycle(), calculatePendingCycles(), billing accessors, resetBillingCheck()
+- src/game/game.ts - Added billing timestamp validation logging on load
+
+**Validation:**
+- Build succeeds (TypeScript compiles with no errors)
+- Billing timestamps survive save/load correctly
+- Multiple billing cycles process correctly if offline for extended time
+- Console logging confirms correct behavior on load and processing
+- No save version bump needed (nextBillingTimestamp already persisted in P7.2)
+
+**Risks:**
+- None identified. All billing logic is centralized and timestamp-based for persistence safety.
+
+### 2025-01-XX - P7.3 Complete: Debt HUD and Billing Statement Visibility
+**Summary:**
+- Added debt panel to idle hub UI displaying outstanding debt, debt ceiling, payment due, and billing countdown
+- Implemented warning visuals with color-coded states (cyan < 70%, yellow 70-90%, red >= 90%)
+- Added pulsing border animations for warning (yellow) and critical (red) debt levels
+- Critical state shows "⚠ WARNING" text indicator
+- Countdown formatted as "Xd Xh Xm" from nextBillingTimestamp
+
+**Changed Files:**
+- src/scenes/idle/render-ui.ts - Added renderDebtPanel() method with debt display and warning visuals
+- src/scenes/idle/index.ts - Integrated debt panel into renderMainUI() after viral multiplier badge
+
+**Validation:**
+- Build succeeds (TypeScript compiles with no errors)
+- Panel positioned at (30, 180) below existing UI elements (energy: y=30, efficiency: y=90, viral: y=135)
+- No overlap with existing UI elements verified
+- No hit-testing issues (debt panel is display-only, no interaction)
+- Warning visual states implemented: normal (cyan), warning 70%+ (yellow pulse), critical 90%+ (red fast pulse)
+
+**Risks:**
+- None identified. Debt panel is display-only with no gameplay logic.
+
+### 2025-01-XX - P7.2 Complete: Debt/Meta State Scaffold
+**Summary:**
+- Added MetaState interface with 6 fields: outstandingDebt, debtCeiling, paymentDue, nextBillingTimestamp, currentSector, operatingModel
+- Created createMetaState() factory with defaults (debt: 0, ceiling: 1000, sector: sector-1, doctrine: salvager)
+- Integrated MetaState into GameState interface with `meta: MetaState` field
+- Added meta persistence to SectorScavengersSave interface
+- Implemented save/load with null coalescing for backward compatibility
+
+**Changed Files:**
+- src/types/state.ts - Added MetaState interface, createMetaState() factory, and meta field to GameState
+- src/game/game.ts - Added MetaState import, meta field to save interface, save/load persistence
+
+**Validation:**
+- Build succeeds (TypeScript compiles with no errors)
+- Old saves load correctly with default meta state (null coalescing)
+- No save version bump needed (additive change, backward compatible)
+
+**Risks:**
+- None identified. Pure additive scaffold with no gameplay logic.
+
+### 2025-01-XX - P7.1 Complete: Persistence Hardening & Source-of-Truth Cleanup
+**Summary:**
+- Fixed crew source of truth: cryoState.pods[*].crew is now the authoritative source
+- Added shipClaimProgress to save/load persistence
+- Added recalculateAwakenedCount() safety validation function
+- Updated tactic-card-system to read crew from cryo pods
+- Documented deprecated crewRoster and crewAssignments fields
+
+**Changed Files:**
+- src/types/state.ts - Added documentation clarifying crew source of truth, marked crewRoster/crewAssignments as deprecated
+- src/game/game.ts - Added shipClaimProgress to save/load, added recalculateAwakenedCount() call on load
+- src/systems/tactic-card-system.ts - Updated crew XP/death loss to use pods instead of crewRoster
+- src/systems/cryo-system.ts - Added recalculateAwakenedCount() function with desync warning
+
+**Validation:**
+- Build succeeds (TypeScript compiles with no errors)
+- No breaking changes to save format (version remains 1)
+- Safety validation logs warnings if desync detected and auto-corrects
+
+**Risks:**
+- None identified. All changes are low-risk and backward-compatible.
+- crewRoster and crewAssignments fields remain for P7.2 work but are documented as deprecated.
+
+### 2025-01-XX - P7.8 Complete: Sector Progression Shell
+**Summary:**
+- Implemented minimal 3-sector progression system with unlock conditions
+- Sector unlock formula: missions >= (N-1) * 5 AND debt < ceiling * 0.8
+- Sector 1: Starting sector (always unlocked)
+- Sector 2: Requires 5 missions + debt < 80% ceiling
+- Sector 3: Requires 10 missions + debt < 80% ceiling
+- Hub varies ship rarity weights by sector:
+  - Sector 1: 40% Common, 25% Uncommon, 15% Rare, 10% Epic, 8% Legendary, 2% Jackpot
+  - Sector 2: 30% Common, 25% Uncommon, 20% Rare, 12% Epic, 10% Legendary, 3% Jackpot
+  - Sector 3: 20% Common, 25% Uncommon, 25% Rare, 15% Epic, 12% Legendary, 3% Jackpot
+- IdleSystem checks sector unlock every 5 seconds
+- Signal log announces sector advancement
+- Results scene displays current sector number
+- Debt panel shows sector indicator
+
+**Changed Files:**
+- src/config/economy-config.ts - Added SECTOR_CONFIG with unlock conditions and rarity weights
+- src/game/game.ts - Added checkSectorUnlock(), getCurrentSectorNumber() methods
+- src/systems/idle-system.ts - Added periodic sector unlock checking
+- src/systems/hub-system.ts - Updated populate() to accept sector parameter and vary weights
+- src/scenes/idle/index.ts - Pass current sector to hub populate()
+- src/scenes/idle/render-ui.ts - Added sector display to debt panel
+- src/scenes/results-scene.ts - Added sector display to results summary
+
+**Validation:**
+- Build succeeds (TypeScript compiles with no errors)
+- Sector unlock logic centralized in Game.checkSectorUnlock()
+- Hub varies ship quality appropriately per sector
+- No save version bump needed (currentSector already persisted in P7.2)
+
+**Risks:**
+- None identified. Sector progression is lightweight and expandable.
+
+### 2025-01-XX - P7.7 Complete: Debt-Gated Recruit Waking
+**Summary:**
+- Named (authored) recruits add 150 debt when woken
+- Debt ceiling (1000) enforced - cannot wake authored recruits if would exceed cap
+- Cryo UI shows debt cost warning ("DEBT: +150") for authored recruits
+- UI shows "DEBT CAP" warning when player cannot afford debt
+- wakeCrewMember() signature updated with debt parameters
+- Signal log announces authored recruit contracts
+- Console logging for all wake events including debt costs
+
+**Changed Files:**
+- src/config/economy-config.ts - Added DEBT_CONFIG with authoredRecruitDebtCost (150) and debtCeiling (1000)
+- src/systems/cryo-system.ts - Updated wakeCrewMember() to check debt ceiling, return debtCost
+- src/scenes/idle/cryo-handlers.ts - Pass debt params, apply debt on success, import signalLogSystem
+- src/ui/cryo-ui/frozen-card.ts - Added debt warning display, debt cap indicator
+- src/ui/cryo-ui/panel.ts - Pass debt params through to frozen card rendering
+
+**Validation:**
+- Build succeeds (TypeScript compiles with no errors)
+- Debt ceiling prevents over-recruiting
+- Clear visual feedback for debt costs
+- Generic crew remain debt-free
+- No save version bump needed (outstandingDebt already persisted in P7.2)
+
+**Risks:**
+- None identified. Debt-gated waking creates meaningful resource management choice.
+
+### 2025-01-XX - P7.6 Complete: Named Recruit Skeleton
+**Summary:**
+- Added AuthoredRecruit interface and AUTHORED_RECRUITS constant with example character (Vera Chen - Engineer)
+- Extended CrewMember interface with optional isAuthored, authoredId, and bio fields (backward compatible)
+- Created createAuthoredCrewMember() to generate CrewMember from authored definition
+- Created createAuthoredPod() in cryo-system to create CryoPods from authored recruits
+- Updated frozen-card.ts UI to display authored recruits with:
+  - ★ badge after name
+  - Golden border (COLORS.warningYellow)
+  - Bio text instead of role description (truncated with ...)
+- Updated awake-card.ts UI with consistent authored recruit styling
+- Generic crew unchanged - no badge, no bio, normal styling
+
+**Changed Files:**
+- src/types/crew.ts - Added AuthoredRecruit interface, AUTHORED_RECRUITS constant, createAuthoredCrewMember()
+- src/systems/cryo-system.ts - Added createAuthoredPod() function
+- src/ui/cryo-ui/frozen-card.ts - Added authored recruit visual distinction
+- src/ui/cryo-ui/awake-card.ts - Added authored recruit visual distinction
+
+**Validation:**
+- Build succeeds (TypeScript compiles with no errors)
+- Generic crew still work (isAuthored === undefined, no authored UI elements)
+- Authored recruits display correctly with bio and badge
+- No save version bump needed (additive fields, backward compatible)
+
+**Risks:**
+- None identified. All changes are additive and backward compatible.
+
+### Prompt Pack: Makko-Safe Execution Order
+
+Each prompt below is designed to be run independently. Every prompt tells the next agent how to work safely in this repo and how to record progress.
+
+#### Prompt 1 - Stabilize the hot path before adding features
+
+```text
+You are working in the Sector Scavengers repository.
+
+First read:
+- NARRATIVE_REWORK.md
+- CHARACTER_BIBLE.md
+- DEBT_LOOP_AND_SECTOR_ARC.md
+- src/types/state.ts
+- src/game/game.ts
+
+Goal:
+Complete Phase 7 task P7.1 only: persistence hardening and source-of-truth cleanup.
+
+Requirements:
+- Do not add any new files unless absolutely necessary.
+- Prefer editing existing hot-path files only.
+- Treat the live architecture as:
+  - one mutable Game.state
+  - manual save/load in src/game/game.ts
+  - scene-local UI and input
+- Do not refactor toward BaseScene/SystemRegistry.
+- Do not add debt gameplay yet.
+
+Focus on:
+- saving runtime fields that already matter but are not persisted
+- choosing and documenting one crew source of truth
+- reducing split ownership between cryoState and crewRoster enough that future named recruit work is safe
+- making the least invasive changes possible
+
+Likely files:
+- src/types/state.ts
+- src/game/game.ts
+- src/systems/tactic-card-system.ts
+- src/systems/cryo-system.ts
+
+Before finishing:
+- run relevant validation/build if available
+- update NARRATIVE_REWORK.md:
+  - check off P7.1
+  - fill in the P7.1 row in the Phase 7 Task Log
+  - append a Phase 7 changelog note
+- commit and push the change
+```
+
+#### Prompt 2 - Add the debt/meta state scaffold
+
+```text
+You are working in the Sector Scavengers repository.
+
+First read:
+- NARRATIVE_REWORK.md
+- DEBT_LOOP_AND_SECTOR_ARC.md
+- src/types/state.ts
+- src/game/game.ts
+
+Goal:
+Complete Phase 7 task P7.2 only: add the debt/meta state scaffold safely.
+
+Requirements:
+- Do not add full gameplay logic yet.
+- Do not create new systems if the state can live cleanly in existing files.
+- Prefer a coherent meta state shape over scattering many top-level fields.
+- Persist everything end-to-end.
+- If save shape changes materially, bump version and wire migration.
+
+Add the minimum scaffold needed for later work:
+- outstanding debt
+- debt ceiling
+- payment due
+- next billing timestamp or cycle timing fields
+- current sector
+- light doctrine/operating model scaffolding
+
+Likely files:
+- src/types/state.ts
+- src/game/game.ts
+
+Before finishing:
+- validate the game still loads existing/new saves safely
+- update NARRATIVE_REWORK.md:
+  - check off P7.2
+  - fill in the P7.2 log row
+  - append a changelog note with save version details
+- commit and push
+```
+
+#### Prompt 3 - Surface debt cleanly in the hub UI
+
+```text
+You are working in the Sector Scavengers repository.
+
+First read:
+- NARRATIVE_REWORK.md
+- DEBT_LOOP_AND_SECTOR_ARC.md
+- src/scenes/idle/index.ts
+- src/scenes/idle/render-ui.ts
+- src/scenes/idle/input-handler.ts
+
+Goal:
+Complete Phase 7 task P7.3 only: add debt HUD and statement visibility in the idle hub.
+
+Requirements:
+- Stay inside the existing fixed 1920x1080 layout model.
+- Reuse current render/input patterns.
+- Do not create a new UI framework or scene.
+- Keep the layout additive and low-risk.
+
+Add:
+- outstanding debt display
+- debt ceiling display
+- payment due display
+- billing countdown or next statement indicator
+- minimal warning visuals near cap
+
+Likely files:
+- src/scenes/idle/index.ts
+- src/scenes/idle/render-ui.ts
+
+Optional if needed:
+- src/scenes/results-scene.ts
+
+Before finishing:
+- verify no overlap or broken hit-testing in the idle scene
+- update NARRATIVE_REWORK.md:
+  - check off P7.3
+  - fill in the P7.3 log row
+  - append a changelog note
+- commit and push
+```
+
+#### Prompt 4 - Implement the billing cycle processor
+
+```text
+You are working in the Sector Scavengers repository.
+
+First read:
+- NARRATIVE_REWORK.md
+- DEBT_LOOP_AND_SECTOR_ARC.md
+- src/game/game.ts
+- src/systems/idle-system.ts
+- src/scenes/idle/index.ts
+
+Goal:
+Complete Phase 7 task P7.4 only: implement billing cycle processing safely.
+
+Requirements:
+- Centralize billing logic; do not scatter it through many card handlers.
+- Use a persistence-friendly time model.
+- Reuse existing idle/update timing patterns or timestamp-based patterns.
+- Keep the first version simple and debuggable.
+
+Implement:
+- cycle rollover
+- payment due processing
+- near-cap warning state
+- default/overdue consequences scaffold
+- hooks that later prompts can surface in UI/narrative
+
+Likely files:
+- src/game/game.ts
+- src/systems/idle-system.ts
+- src/scenes/idle/index.ts
+
+Optional:
+- src/systems/signal-log-system.ts
+
+Before finishing:
+- validate save/load behavior around billing timing
+- update NARRATIVE_REWORK.md:
+  - check off P7.4
+  - fill in the P7.4 log row
+  - append a changelog note
+- commit and push
+```
+
+#### Prompt 5 - Make runs feed the debt loop
+
+```text
+You are working in the Sector Scavengers repository.
+
+First read:
+- NARRATIVE_REWORK.md
+- DEBT_LOOP_AND_SECTOR_ARC.md
+- src/systems/tactic-card-system.ts
+- src/scenes/results-scene.ts
+- src/game/game.ts
+
+Goal:
+Complete Phase 7 task P7.5 only: integrate run outcomes with debt progression.
+
+Requirements:
+- Keep debt resolution concentrated in a small number of places.
+- Avoid turning tactic-card-system.ts into an even broader god-object than necessary.
+- Preserve the current run/results flow.
+
+Implement the minimum viable loop:
+- successful runs contribute to paying or servicing debt
+- failed runs meaningfully hurt momentum
+- results scene shows debt-relevant consequences
+- signal log or other existing text surfaces can announce major financial events
+
+Likely files:
+- src/systems/tactic-card-system.ts
+- src/scenes/results-scene.ts
+- src/game/game.ts
+- src/systems/signal-log-system.ts
+
+Before finishing:
+- verify current run state still survives into results correctly
+- update NARRATIVE_REWORK.md:
+  - check off P7.5
+  - fill in the P7.5 log row
+  - append a changelog note
+- commit and push
+```
+
+#### Prompt 6 - Add named recruits through the existing cryo flow
+
+```text
+You are working in the Sector Scavengers repository.
+
+First read:
+- NARRATIVE_REWORK.md
+- CHARACTER_BIBLE.md
+- DEBT_LOOP_AND_SECTOR_ARC.md
+- src/types/crew.ts
+- src/systems/cryo-system.ts
+- src/scenes/idle/cryo-handlers.ts
+- src/ui/cryo-ui/panel.ts
+
+Goal:
+Complete Phase 7 task P7.6 only: create a named recruit skeleton using the existing cryo flow.
+
+Requirements:
+- Reuse cryo as the recruit surface; do not build a new recruit scene.
+- Keep new files to zero if possible.
+- Use cryoState as the live source of truth unless Phase 7 log says otherwise.
+- Implement only enough authored data and UI to support future named leads cleanly.
+
+Focus on:
+- recruit metadata on crew
+- a distinction between generic and authored recruits
+- displaying named recruit details in the cryo UI
+- keeping the implementation future-expandable
+
+Likely files:
+- src/types/crew.ts
+- src/systems/cryo-system.ts
+- src/scenes/idle/cryo-handlers.ts
+- src/ui/cryo-ui/panel.ts
+- src/ui/cryo-ui/frozen-card.ts
+- src/ui/cryo-ui/awake-card.ts
+
+Before finishing:
+- verify generic crew still work
+- update NARRATIVE_REWORK.md:
+  - check off P7.6
+  - fill in the P7.6 log row
+  - append a changelog note
+- commit and push
+```
+
+#### Prompt 7 - Make waking named recruits add debt
+
+```text
+You are working in the Sector Scavengers repository.
+
+First read:
+- NARRATIVE_REWORK.md
+- CHARACTER_BIBLE.md
+- DEBT_LOOP_AND_SECTOR_ARC.md
+- src/systems/cryo-system.ts
+- src/scenes/idle/cryo-handlers.ts
+- src/game/game.ts
+- src/scenes/idle/render-ui.ts
+
+Goal:
+Complete Phase 7 task P7.7 only: debt-gated recruit waking.
+
+Requirements:
+- Waking named recruits should deepen the debt loop in a way the player can understand.
+- Enforce debt ceiling rules cleanly.
+- Keep the player-facing UX inside the current cryo and hub UI surfaces.
+- Do not create a separate contract or HR scene.
+
+Implement:
+- named recruit wake debt
+- debt ceiling checks before wake
+- clear UI messaging about the financial consequence
+- basic narrative feedback through existing surfaces
+
+Likely files:
+- src/systems/cryo-system.ts
+- src/scenes/idle/cryo-handlers.ts
+- src/scenes/idle/render-ui.ts
+- src/game/game.ts
+- src/systems/signal-log-system.ts
+
+Before finishing:
+- verify failed wake attempts are safe and readable
+- update NARRATIVE_REWORK.md:
+  - check off P7.7
+  - fill in the P7.7 log row
+  - append a changelog note
+- commit and push
+```
+
+#### Prompt 8 - Add a minimal sector progression shell
+
+```text
+You are working in the Sector Scavengers repository.
+
+First read:
+- NARRATIVE_REWORK.md
+- CHARACTER_BIBLE.md
+- DEBT_LOOP_AND_SECTOR_ARC.md
+- src/types/state.ts
+- src/systems/hub-system.ts
+- src/scenes/idle/index.ts
+- src/scenes/results-scene.ts
+
+Goal:
+Complete Phase 7 task P7.8 only: add a minimal sector progression shell.
+
+Requirements:
+- Do not build a giant map or extra campaign scene yet.
+- Reuse the current hub population and run loop.
+- Make sectors feel like progression, not just a label.
+
+Implement:
+- current sector tracking
+- minimal unlock conditions or progression milestones
+- hub population variation by sector if safe
+- basic UI surfacing in the idle hub and/or results
+
+Likely files:
+- src/types/state.ts
+- src/game/game.ts
+- src/systems/hub-system.ts
+- src/scenes/idle/index.ts
+- src/scenes/idle/render-ui.ts
+- src/scenes/results-scene.ts
+
+Before finishing:
+- verify current hub behavior is still stable
+- update NARRATIVE_REWORK.md:
+  - check off P7.8
+  - fill in the P7.8 log row
+  - append a changelog note
+- commit and push
+```
+
+#### Prompt 9 - Add narrative reactivity using existing surfaces
+
+```text
+You are working in the Sector Scavengers repository.
+
+First read:
+- NARRATIVE_REWORK.md
+- CHARACTER_BIBLE.md
+- DEBT_LOOP_AND_SECTOR_ARC.md
+- src/systems/signal-log-system.ts
+- src/scenes/results-scene.ts
+- src/scenes/idle/index.ts
+- src/dialogue/story-state.ts
+
+Goal:
+Complete Phase 7 task P7.9 only: add narrative reactivity for debt, recruits, and sector progression.
+
+Requirements:
+- Prefer existing surfaces:
+  - signal log
+  - results copy
+  - hub reactions
+- Do not introduce a large new dialogue framework unless absolutely required.
+- Keep the first pass lightweight, systemic, and expandable.
+
+Implement:
+- debt warnings and statement beats
+- recruit arrival beats
+- sector progression beats
+- a small amount of persistent narrative state if needed
+
+Likely files:
+- src/systems/signal-log-system.ts
+- src/scenes/results-scene.ts
+- src/scenes/idle/index.ts
+- src/game/game.ts
+- src/dialogue/story-state.ts
+
+Before finishing:
+- verify the new text beats do not spam or break flow
+- update NARRATIVE_REWORK.md:
+  - check off P7.9
+  - fill in the P7.9 log row
+  - append a changelog note
+- commit and push
+```
+
+#### Prompt 10 - Clean up for future expansion without over-refactoring
+
+```text
+You are working in the Sector Scavengers repository.
+
+First read:
+- NARRATIVE_REWORK.md
+- CHARACTER_BIBLE.md
+- DEBT_LOOP_AND_SECTOR_ARC.md
+- the Phase 7 Task Log and Changelog entries
+
+Goal:
+Complete Phase 7 task P7.10 only: future-expansion cleanup.
+
+Requirements:
+- Do not perform a broad architecture rewrite.
+- Improve only the seams needed to support more sectors, more recruits, doctrine, and endings later.
+- Keep file count low.
+
+Focus on:
+- confirming the final source of truth for crew/meta progression
+- documenting extension seams
+- cleaning up any dangerous duplication introduced in Phase 7
+- leaving the codebase more expandable than before
+
+Likely files:
+- NARRATIVE_REWORK.md
+- src/types/state.ts
+- src/game/game.ts
+- any Phase 7 hot-path files that need minor cleanup
+
+Before finishing:
+- update NARRATIVE_REWORK.md:
+  - check off P7.10
+  - fill in the P7.10 log row
+  - append a changelog note
+- commit and push
+```
+
+### Recommended Implementation Order
+
+Run the prompts in order.
+
+Do **not** skip straight to sectors or named recruits before:
+- persistence is stable
+- debt state exists
+- billing is in place
+
+That order is what keeps the Makko project from becoming brittle.
