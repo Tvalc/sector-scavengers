@@ -1,457 +1,371 @@
-# Sector Scavengers: Signal & Salvage — Social Media Marketing Kit
+# Sector Scavengers — Marketing Kit v2
+
+What StS2 and Hades 2 get right: **emotional arc, instant hook, climactic payoff, and a story the audience tells themselves after watching.** This kit is built around that.
 
 ---
 
-## HYPE REEL — Footage Guide
+## 1. TRAILER STORYBOARD — "Terms and Conditions"
 
-Two clips were recorded and are available as artifacts:
+**Runtime target:** 45–60 seconds
+**Tone:** Eerie calm → comedic horror → dread → defiance
+**Reference vibe:** Aperture Science orientation video meets Inscryption reveal trailer
 
-| Clip | File | Duration | Content |
-|------|------|----------|---------|
-| **Tutorial Narrative** | `hype_reel_title_to_tutorial.mp4` | ~45s | Title screen → V.A.L.U.'s intro → $1M debt reveal → "dream-optimized onboarding" → energy system |
-| **Hub Gameplay** | `hype_reel_hub_gameplay.mp4` | ~30s | Skip tutorial → isometric hub → floating derelicts → scrolling news ticker → idle power generation |
+### Shot List
 
-### Recommended Edit Order (for a 30–60s cut)
+| # | Time | Visual | Text Overlay | Audio | Emotion |
+|---|------|--------|-------------|-------|---------|
+| 1 | 0:00–0:02 | BLACK SCREEN | *You wake up.* | Low hum. Single heartbeat. | Disorientation |
+| 2 | 0:02–0:05 | Cryo chamber fades in. Six sleeping crew in pods. Central figure (you) glowing. | — | Ambient cryo hiss. Soft chime. | Curiosity |
+| 3 | 0:05–0:08 | V.A.L.U. dialogue: *"Glorious cycle to you, Valued Asset #864!"* | — | V.A.L.U.'s voice (imagine: chirpy text-to-speech or upbeat synth jingle). | False comfort |
+| 4 | 0:08–0:10 | Smash cut — QUICK FLASH of dialogue lines scrolling (name, Sector 7, investment). | — | Fast-forward whoosh sound. | Momentum |
+| 5 | 0:10–0:14 | HOLD on debt reveal. Dialogue: *"Your Opportunity Balance is a mere $1,000,000 in deferred productivity contributions."* | **$1,000,000** (large, red, center screen — appears 0.5s after dialogue) | Music drops out. Dead silence. Then a cash register "cha-ching." | **SHOCK** |
+| 6 | 0:14–0:17 | Max's three choices appear. Camera slowly zooms into first option. | Highlight: *"A million dollars?! What did I sign?!"* | Low rumble building. | Dread |
+| 7 | 0:17–0:21 | V.A.L.U. response: *"Your neural pattern consented during the onboarding flash. Perfectly legal!"* | **Perfectly legal.** (flickers on screen like a glitch) | Distorted corporate jingle. Single off-key note. | **HORROR** |
+| 8 | 0:21–0:23 | Quick cut — hub gameplay. Isometric grid. Derelicts floating. Energy counter ticking up. | — | Synth pulse kicks in. Tempo building. | Shift to action |
+| 9 | 0:23–0:26 | Battery core fills to 1,000. "READY TO DIVE" flashes. | **READY TO DIVE** | Bass drop hint. | Anticipation |
+| 10 | 0:26–0:30 | COLLAPSE RISK meter filling to 35%. Red bar. V.A.L.U.: *"The Company calls it a 'Spontaneous Unscheduled Asset Liquidation Event.'"* | **35%** (massive, red, pulsing) | Alarm klaxon. Heartbeat. | **TENSION** |
+| 11 | 0:30–0:33 | Quick cuts — SCAVENGE card flash / reward items / hull breach warning / crew in cryo pods | — | Fast percussion. Staccato hits. | Chaos |
+| 12 | 0:33–0:37 | Max's dialogue choice: *"I guess I don't really have a choice, do I?"* | — | Music softens. Single piano note. | Resignation |
+| 13 | 0:37–0:41 | V.A.L.U.: *"I APPRECIATE your pragmatism!"* Hold beat. Then: *"You're going to fit in SO well here!"* | — | V.A.L.U.'s jingle returns, slightly distorted. | Unease |
+| 14 | 0:41–0:45 | BLACK. V.A.L.U.'s final line appears as text, typewriter-style: *"The Company believes in you."* | **The Company believes in you.** | Silence. Then a single keystroke sound per letter. | **DREAD** |
+| 15 | 0:45–0:48 | Smaller text fades in below: *(Terms and conditions apply. Many of them.)* | *(Terms and conditions apply. Many of them.)* | — | Dark comedy |
+| 16 | 0:48–0:52 | Title card: **SECTOR SCAVENGERS: SIGNAL & SALVAGE** over the space station art. | **Play free in your browser.** | Full synth-wave theme kicks in for 3 seconds. | Release / hype |
 
-1. **0–3s** — Title screen hero shot (SECTOR SCAVENGERS title over space station art)
-2. **3–8s** — Quick cut: cryo chamber interior, sleeping crew, V.A.L.U.'s first line
-3. **8–14s** — Text card overlay: *"You owe The Company $1,000,000"* over the debt dialogue
-4. **14–18s** — Max's reaction choice: *"A million dollars?! What did I sign?!"*
-5. **18–22s** — V.A.L.U.: *"Your neural pattern consented during the onboarding flash. Perfectly legal!"*
-6. **22–28s** — Smash cut to hub gameplay: isometric grid, derelict ships floating, power counter ticking up
-7. **28–30s** — End card: game logo + "Play Now" CTA
+### Raw Footage Available
 
-### Suggested Music/Audio
-- Synth-wave or lo-fi space ambient
-- Record scratch/beat drop on the $1M debt reveal
-- Corporate hold-music for V.A.L.U.'s lines (ironic contrast)
+| Clip | File | Use For |
+|------|------|---------|
+| Narrative reel (FAST-SLAM pacing) | `v2_dramatic_narrative_reel.mp4` | Shots 2–7, 10, 12–13 |
+| Hub gameplay | `hype_reel_hub_gameplay.mp4` | Shots 8–9 |
+| Title screen | `hype_reel_title_to_tutorial.mp4` (first 3s) | Shot 16 |
+
+### Key Screenshots for Overlay/Compositing
+
+| File | Content |
+|------|---------|
+| `v2_1m_debt_reveal.webp` | The $1M debt dialogue — Shot 5 |
+| `v2_collapse_risk_35pct.webp` | COLLAPSE RISK: 35% meter — Shot 10 |
+| `v2_max_no_choice.webp` | Max: "I guess I don't really have a choice" — Shot 12 |
+| `v2_terms_and_conditions.webp` | "The Company believes in you" final line — Shot 14 |
 
 ---
 
-## REDDIT POSTS
+## 2. REDDIT
+
+### Lesson from StS2 / Hades 2 community reception
+
+What hit on Reddit: genuine excitement from real players, unexpected reveals, and writing that people wanted to quote. The top comments on StS2's trailer were *quoting the trailer*. That's the goal — give people lines they'll paste into comments.
 
 ---
 
-### r/incremental_games
+### r/incremental_games — "The Writing Carries"
 
-**Title:** I made an idle game where you're a space scavenger paying off $1,000,000 in corporate debt — your AI boss calls it "deferred productivity contributions"
+**Title:** This game's AI told me my brain signed a contract while I was sleeping and that it was "perfectly legal." I can't stop playing it.
 
 **Body:**
 
-Hey r/incremental_games!
+I don't usually care about story in idle games. I'm here for the numbers going up.
 
-I've been working on **Sector Scavengers: Signal & Salvage** — an idle/tactical game set in a corporate dystopia IN SPACE.
+But **Sector Scavengers** got me with the onboarding. You wake from cryo. A corporate AI named V.A.L.U. informs you that:
 
-**The hook:** You wake up from cryo-sleep and an overly cheerful AI named V.A.L.U. ("Valued Asset Logistics Unit") informs you that you owe The Company $1,000,000. You apparently consented during "dream-optimized onboarding." Perfectly legal, they assure you.
+- You owe **$1,000,000** in "deferred productivity contributions"
+- You "consented" via neural pattern during something called "dream-optimized onboarding"
+- Your crew members came with the facility and are "actually leased, but let's keep that between us"
 
-**The gameplay loop:**
+Then it cheerfully teaches you the idle loop:
 
-- Ships passively generate energy (idle income)
-- At 1,000 energy, initiate a **Depth Dive** — a 10-round tactical card session
-- Play SCAVENGE (risky rewards), REPAIR (persist your ship), or EXTRACT (safe exit with loot)
-- But push too hard and the danger meter hits 35%... and your rig "undergoes Spontaneous Unscheduled Asset Liquidation"
-- Claim derelict ships, convert them to stations, build rooms, manage crew in cryo pods
-- Death gives you Scrap and unlocks new cards (meta-progression!)
+- Ships generate energy passively (+10/min each, 1000 cap)
+- When full you do a **Depth Dive** — 10 rounds of card-based gambling
+- SCAVENGE = risky reward. REPAIR = safe progress. EXTRACT = take your loot and run.
+- **35% danger = everything explodes.** V.A.L.U. calls this a "Spontaneous Unscheduled Asset Liquidation Event."
+- Death gives you Scrap + deck unlocks. So dying isn't wasted — it's "meta-progression."
 
-The risk/reward tension is the core of it. Every SCAVENGE card is a gamble. Do you push for one more reward or EXTRACT safely?
+The risk/reward loop is brutal in the best way. I keep pushing one more SCAVENGE because the reward pool is good on rounds 3/6/9... and then I'm staring at 33% danger wondering if I'm an idiot.
 
-V.A.L.U. would love to remind you that "excessive accumulation during single dives is discouraged."
-
-[Gameplay screenshots / video]
-
-Would love feedback from the idle game community. What mechanics would you want to see expanded?
-
-**Flair:** Browser Game
+Anyone else get suckered by an idle game's writing?
 
 ---
 
-### r/WebGames
+### r/WebGames — "Technical Flex"
 
-**Title:** Sector Scavengers — a browser-based idle/tactical game where your corporate AI calls getting fired a "Spontaneous Unscheduled Asset Liquidation Event"
+**Title:** Browser game, zero dependencies, pure Canvas2D — and it loads 12 animated sprite characters and 23 background assets from a CDN in under 2 seconds
 
 **Body:**
 
-Built entirely in TypeScript with HTML5 Canvas. No framework, no engine dependency, just pure canvas rendering.
+**Sector Scavengers: Signal & Salvage** — [play link]
 
-**Play it in your browser** — no downloads, no installs.
+TypeScript. HTML5 Canvas. No React, no Phaser, no Pixi, no engine. Custom renderer, custom input system, custom sprite animation pipeline.
 
-You're a deep-space scavenger paying off a million-dollar corporate debt by salvaging derelict ships. Your AI companion V.A.L.U. is aggressively supportive and morally questionable.
+What it does:
+- Loads two JSON manifests at startup (sprite sheets + static assets)
+- Parses frame data, builds animation state machines per character
+- Renders a full isometric hub with parallax scrolling backgrounds
+- Card-based tactical overlay system during "Depth Dives"
+- State persistence via localStorage (no server, no auth, no database)
+- Mock SDK for blockchain integration that gracefully degrades in dev
 
-Features:
-- Isometric hub with floating derelicts to claim
-- Card-based Depth Dive system (SCAVENGE / REPAIR / EXTRACT)
-- Crew management with cryo pod mechanics
-- 35% danger threshold that can wipe your entire run
-- Ship-to-station conversion with room building
-- Idle energy generation while you're away
-- News ticker with procedurally generated sector events
+The game itself: idle/tactical hybrid where you scavenge derelict ships to pay off $1M in corporate debt. The AI companion's writing is genuinely funnier than it has any right to be.
 
-The writing is the secret weapon — V.A.L.U. delivers lines like "Memory gaps are a common side effect of cryo-storage! But don't worry — your signature was digitally captured during your REM cycle. The Company calls it 'dream-optimized onboarding'!"
-
-[Link to play]
+What it looks like: [attach hub screenshot + cryo chamber screenshot]
 
 ---
 
-### r/indiegames
+### r/indiegames — "Art First"
 
-**Title:** After months of work, here's the title screen of my corporate dystopia space game — you wake up owing $1,000,000 and your AI boss is THRILLED about it
+**Title:** [Screenshot] Six sleeping crew members in a cryo chamber. One AI that's way too happy about your $1,000,000 debt. Hand-drawn pastel sci-fi for a browser game.
 
 **Body:**
 
-[Attach title screen image + tutorial screenshot with V.A.L.U. dialogue]
+[Attach cryo chamber screenshot as the hero image]
 
-**Sector Scavengers: Signal & Salvage** — an idle/tactical browser game where you scavenge derelict ships in deep space to pay off corporate debt.
+This is the opening of **Sector Scavengers: Signal & Salvage**.
 
-The AI that runs your onboarding is named V.A.L.U. (Valued Asset Logistics Unit) and it's the most aggressively positive entity you'll ever meet. Some highlights:
+You wake up here. The AI (V.A.L.U.) tells you that you owe The Company a million dollars. You apparently signed the contract in your sleep. "Dream-optimized onboarding," they call it.
 
-> "Your current Opportunity Balance is a mere $1,000,000 in deferred productivity contributions. But don't worry — with my help, you'll have that cleared in no time!"
+The art direction is pastel sci-fi — lavender, teal, soft pink — deliberately clashing with the writing, which is corporate dystopia played for dark laughs. The dissonance is the point. Everything looks warm and safe. Nothing is.
 
-When you ask what you signed:
+Gameplay is idle energy generation feeding into a tactical card-based risk/reward system. You pick SCAVENGE (gamble for loot), REPAIR (safe but slow), or EXTRACT (cash out). But the collapse threshold sits at 35%, and every SCAVENGE nudges you closer.
 
-> "Your neural pattern consented during the onboarding flash. Perfectly legal! The Company's legal team assures me it's incredibly binding!"
-
-The tone is corporate dystopia meets idle game meets dark comedy. Think Aperture Science crossed with Cookie Clicker in space.
-
-Gameplay is idle energy generation + tactical card-based runs where you risk everything at a 35% collapse threshold.
-
-Feedback welcome!
+Browser-based, free, no download. Made with pure HTML5 Canvas.
 
 ---
 
-### r/gaming
+### r/gaming — "The Line That Hooks"
 
-**Title:** My game's AI companion casually reveals you owe $1,000,000 because your brain "consented during your REM cycle." It calls this "dream-optimized onboarding."
+**Title:** I just wanted an idle game to kill time. Then the AI said "Your neural pattern consented during the onboarding flash. Perfectly legal!" and now I have trust issues.
 
 **Body:**
 
-[Attach screenshot of the debt reveal dialogue + Max's "A million dollars?!" reaction]
+[Attach the neural consent dialogue screenshot]
 
-Working on a browser game called Sector Scavengers. It's an idle/tactical game set in a corporate dystopia in space.
+The game is called Sector Scavengers. You scavenge derelict ships in space. Standard idle fare.
 
-The tutorial is essentially your AI boss V.A.L.U. explaining how screwed you are in the most cheerful way possible.
+Except the tutorial is a corporate dystopia onboarding session run by an AI named V.A.L.U. who:
 
-My favorite exchange:
+- Calls you "Valued Asset #864" instead of your name
+- Reveals you owe $1,000,000 from a contract you signed while unconscious
+- Describes your crew as "part of your compensation package (they're actually leased)"
+- Refers to total mission failure as a "Spontaneous Unscheduled Asset Liquidation Event"
+- When you ask if you have a choice, says: "The ability to recognize optimal paths is EXACTLY what The Company looks for!"
 
-**You:** "A million dollars?! What did I sign?!"
-
-**V.A.L.U.:** "Concern is understandable but unnecessary! Your neural pattern consented during the onboarding flash. Perfectly legal! The Company's legal team assures me it's incredibly binding!"
-
-Then later it explains that if you push too hard during a mission, your entire rig "undergoes Spontaneous Unscheduled Asset Liquidation." Which is corporate-speak for "everything explodes and you lose your stuff."
-
----
-
-### r/antiwork (if appropriate for the tone)
-
-**Title:** I made a game where an AI tells you that your brain signed a $1M employment contract while you were sleeping and that this is "dream-optimized onboarding"
-
-**Body:**
-
-[Screenshot of V.A.L.U.'s "dream-optimized onboarding" line]
-
-Sometimes satire writes itself.
-
-In my game Sector Scavengers, you wake up from cryo-sleep and your corporate AI companion informs you that:
-
-- You owe $1,000,000 in "deferred productivity contributions"
-- You consented via "neural pattern" during "the onboarding flash"
-- Your crew was "assigned" to you (they're actually leased)
-- Getting your stuff destroyed is called a "Spontaneous Unscheduled Asset Liquidation Event"
-- The AI's name is V.A.L.U. — "Valued Asset Logistics Unit"
-
-When you ask if you have a choice about broadcasting your achievements to the company's social network for a productivity bonus, V.A.L.U. says:
-
-> "I APPRECIATE your pragmatism! The ability to recognize optimal paths is EXACTLY what The Company looks for in its Valued Assets!"
-
-It's a browser game. You scavenge derelict ships to pay off your debt. The Company believes in you.
-
-*(Terms and conditions apply. Many of them.)*
+The gameplay has a 35% collapse threshold that will wipe your entire run. And somehow the writing makes losing funny.
 
 ---
 
-### r/pixelart / r/gamedev (art showcase)
+## 3. TWITTER / X
 
-**Title:** Hand-drawn cryo chamber scene for my browser game — the pastel sci-fi aesthetic I've been going for
+### The Thread — "Orientation"
 
-**Body:**
+**1/5:**
+You wake up from cryo.
 
-[Attach tutorial/cryo chamber screenshot showing the beautiful interior]
+An AI called V.A.L.U. says you owe $1,000,000.
 
-This is the cryo chamber scene from **Sector Scavengers: Signal & Salvage**. The player wakes up here surrounded by their sleeping crew while an overly cheerful corporate AI explains they owe $1M.
+You ask what you signed.
 
-Art style: Pastel sci-fi with neon cyan/magenta accents. The cryo pods have a cute character design that contrasts with the dark corporate dystopia writing.
+"Your neural pattern consented during the onboarding flash. Perfectly legal!"
 
-The space viewport in the center has a parallax scrolling effect with floating derelicts and debris.
+Welcome to orientation.
 
-Built with HTML5 Canvas (no game engine) — all rendering is custom Canvas2D.
+🧵
 
----
+**2/5:**
+Your job title: Deep Space Asset Acquisition Specialist.
 
-## TWITTER/X POSTS
+Translation: you strip derelict ships for parts to pay off a debt you don't remember agreeing to.
 
----
+Your crew was "assigned." (They're actually leased. V.A.L.U. asks you to keep that between you.)
 
-### Thread: Launch Announcement
+**3/5:**
+The core loop:
 
-**Tweet 1 (Hook):**
-You wake up from cryo-sleep.
+Ships idle → generate energy.
+1,000 energy → Depth Dive.
+10 rounds. 3 cards. SCAVENGE / REPAIR / EXTRACT.
 
-An AI named V.A.L.U. tells you that you owe $1,000,000.
-
-You apparently consented during your "REM cycle."
-
-The Company calls this "dream-optimized onboarding."
-
-Welcome to Sector Scavengers.
-
-[Attach title screen image]
-
-**Tweet 2:**
-Your job: scavenge derelict ships in deep space to pay off corporate debt.
-
-The catch: every SCAVENGE card is a gamble. Push too hard and the danger meter hits 35%.
+Push too far and the danger meter hits 35%.
 
 V.A.L.U. calls what happens next a "Spontaneous Unscheduled Asset Liquidation Event."
 
 You call it losing everything.
 
-[Attach hub gameplay screenshot]
+**4/5:**
+But here's the thing — death isn't wasted.
 
-**Tweet 3:**
-The AI is the best part.
+You keep Scrap. You unlock new cards. Your meta-progression ticks forward.
 
-"Memory gaps are a common side effect of cryo-storage! But don't worry — your signature was digitally captured during your REM cycle."
+The Company would call this "iterative productivity optimization."
 
-Aperture Science energy. Cookie Clicker meets corporate horror.
+You call it getting good.
 
-Play free in your browser.
+**5/5:**
+Sector Scavengers: Signal & Salvage.
+
+Idle + tactical deckbuilding.
+Corporate dystopia IN SPACE.
+Browser-based. Free.
+
+The Company believes in you.
+
+(Terms and conditions apply. Many of them.)
+
+[Attach title screen]
+
+---
+
+### Standalone Bangers
+
+**A — The Screenshot Tweet:**
+This is the most unhinged line of dialogue I've ever written for a video game and I'm not even sorry
+
+[Attach "dream-optimized onboarding" screenshot]
+
+**B — The Engagement Trap:**
+Your AI boss just told you that you owe $1,000,000. Pick your response:
+
+🟡 "A million dollars?! What did I sign?!"
+🔵 "That's it? I was expecting more of a challenge."
+🟣 "Wait, I don't remember signing anything..."
+
+**C — The Dev Confession:**
+I playtested my own idle game for "5 minutes" and lost 3 hours because I kept doing one more Depth Dive at 31% danger telling myself it was fine
+
+it was not fine
+
+V.A.L.U. did not care
+
+**D — The Visual:**
+Art direction: what if corporate dystopia looked like a Studio Ghibli movie
 
 [Attach cryo chamber screenshot]
 
----
-
-### Standalone Tweets
-
-**Tweet A (Viral bait):**
-My game's AI companion just said this with a straight face:
-
-"Concern is understandable but unnecessary! Your neural pattern consented during the onboarding flash. Perfectly legal!"
-
-I may have written the most unhinged corporate AI in gaming
-
-[Attach debt dialogue screenshot]
-
-**Tweet B (Dev diary):**
-Making an idle game where death is a feature, not a bug.
-
-When your rig collapses in Sector Scavengers, you get:
-- 10 Scrap (meta-currency)
-- 25% deck unlock progress
-- A sarcastic message from your AI boss
-
-"The Company discourages excessive accumulation during single dives."
-
-**Tweet C (Art showcase):**
-Hand-drawn cryo chamber for my browser game 🛸
-
-Pastel sci-fi meets corporate dystopia.
-
-6 sleeping crew members. 1 overly cheerful AI. $1,000,000 in debt.
-
-Built with pure HTML5 Canvas — no engine, no framework.
-
-[Attach cryo chamber screenshot]
-
-**Tweet D (Engagement bait):**
-Your corporate AI gives you three response options after learning you owe $1M:
-
-> "A million dollars?! What did I sign?!"
-> "That's it? I was expecting more of a challenge."
-> "Wait, I don't remember signing anything..."
-
-Which one are you? 👇
-
-[Attach choice dialogue screenshot]
-
-**Tweet E (Gameplay hook):**
-The core loop of Sector Scavengers:
-
-⚡ Ships idle → generate energy
-🔋 1,000 energy → DEPTH DIVE
-🃏 Play cards: SCAVENGE (risky), REPAIR (safe), EXTRACT (exit)
-💀 35% danger = total wipe
-🔄 Death gives Scrap + deck unlocks
-
-"Extract early, extract often!" — V.A.L.U.
+**E — The One-liner:**
+Made a game where your employer signed your employment contract while you were unconscious and my playtesters keep telling me it's "too realistic"
 
 ---
 
-## TIKTOK CONCEPTS
+## 4. TIKTOK
+
+### Key Principle
+
+StS2 and Hades 2 go cinematic on TikTok. We can't compete on production — but we **can** compete on writing. The dialogue IS the content. People will duet/stitch V.A.L.U.'s lines. That's the strategy.
 
 ---
 
-### TikTok 1: "The Most Unhinged Corporate AI"
+### TikTok 1 — "dream-optimized onboarding" (15s)
 
-**Format:** Talking head / screen recording hybrid
-**Duration:** 30–45 seconds
-**Audio:** Trending corporate / office sound or original narration
+**Format:** Green screen / text overlay on gameplay. Zero narration. Let the text do the work.
 
-**Script:**
-[Screen recording of title screen]
-"So I made a game where you wake up from cryo-sleep..."
+| Time | Screen | Text Overlay |
+|------|--------|-------------|
+| 0:00 | Black | *You wake up from cryo-sleep.* |
+| 0:02 | Cryo chamber | *An AI tells you that you owe $1,000,000.* |
+| 0:05 | Debt dialogue | *You ask what you signed.* |
+| 0:07 | Neural consent dialogue | *"Your neural pattern consented during the onboarding flash."* |
+| 0:10 | Zoom on "Perfectly legal!" | ***"Perfectly legal!"*** |
+| 0:12 | Title card | *Sector Scavengers. Play free.* |
 
-[Cut to V.A.L.U.'s greeting]
-"...and an AI named V.A.L.U. tells you that you owe a million dollars."
+**Audio:** Trending "oh no" sound or dramatic pause beat. The silence after "Perfectly legal!" is the hook.
 
-[Cut to debt reveal dialogue]
-"When you ask what you signed..."
-
-[Cut to V.A.L.U.'s response about neural consent]
-"It says your BRAIN signed the contract while you were SLEEPING."
-
-[Cut to "dream-optimized onboarding" text]
-"And it calls this — 'dream-optimized onboarding.'"
-
-[Cut to title screen with text overlay: "play it free in your browser"]
-
-**Caption:** The most unhinged corporate AI in gaming history #indiedev #gamedev #gaming #corporatehumor #dystopia
+**Caption:** dream-optimized onboarding is my new favorite euphemism #gaming #indiedev #corporatehorror
 
 ---
 
-### TikTok 2: "POV: Your New Job Orientation"
+### TikTok 2 — "35%" (20s)
 
-**Format:** POV-style screen recording with text overlays
-**Duration:** 30 seconds
-**Audio:** Corporate hold music → dramatic beat drop on debt reveal
+**Format:** Gameplay footage with overlaid text. Building tension.
 
-**Script:**
-[Text overlay: "POV: Your new job orientation"]
+| Time | Screen | Text Overlay |
+|------|--------|-------------|
+| 0:00 | Hub, energy ticking | *Your ships generate energy.* |
+| 0:03 | Battery at 1000 | *When it's full, you dive.* |
+| 0:05 | Depth dive card area | *Every SCAVENGE card is a gamble.* |
+| 0:08 | Collapse meter rising | *The danger meter climbs.* |
+| 0:11 | 35% red bar | ***35%.*** |
+| 0:13 | V.A.L.U. collapse line | *"Spontaneous Unscheduled Asset Liquidation Event."* |
+| 0:16 | Black | *That means you lose everything.* |
+| 0:18 | Title | *Do you extract, or push your luck?* |
 
-[Screen recording: cryo chamber waking up]
-[Text: "You wake up from cryo-sleep"]
+**Audio:** Heartbeat sound building. Flatline at 0:16.
 
-[V.A.L.U.'s greeting]
-[Text: "Your AI boss is THRILLED to see you"]
-
-[Sector 7 dialogue]
-[Text: "You're in a 'vibrant salvage zone'"]
-
-[Debt reveal — BEAT DROP]
-[Text: "You owe $1,000,000"]
-[Text: "You consented in your SLEEP"]
-
-[V.A.L.U.'s cheerful response]
-[Text: "Perfectly legal!"]
-
-**Caption:** When the onboarding is a little TOO optimized 💀 #pov #gaming #indiegame #corporatehumor
+**Caption:** the company discourages excessive accumulation during single dives #gaming #riskreward #idlegame
 
 ---
 
-### TikTok 3: "This Game Punishes Greed"
+### TikTok 3 — "Things V.A.L.U. Has Said" (25s, compilation)
 
-**Format:** Gameplay showcase with narration
-**Duration:** 45 seconds
-**Audio:** Suspenseful music building to climax
+**Format:** Quick-cut text cards over gameplay. Each quote hits for 2–3 seconds.
 
-**Script:**
-[Hub gameplay]
-"In Sector Scavengers, you scavenge derelict ships for loot."
+**Quotes (in order of escalation):**
+1. "I am SO excited to optimize your productivity journey!"
+2. "Your Opportunity Balance is a mere $1,000,000"
+3. "Your neural pattern consented during the onboarding flash"
+4. "Memory gaps are a common side effect of cryo-storage!"
+5. "Your signature was digitally captured during your REM cycle"
+6. "They came with the facility! They're actually leased."
+7. "The Company believes in you! (Terms and conditions apply. Many of them.)"
 
-[Energy counter ticking]
-"Your ships generate energy passively."
+**Audio:** Corporate hold music, getting more distorted with each quote.
 
-[Text overlay: "Then you do a DEPTH DIVE"]
-"At max energy, you go on a 10-round tactical run."
-
-[Card system mockup or description]
-"Every SCAVENGE card is a gamble."
-
-[Text overlay: "35% DANGER = TOTAL WIPE"]
-"Push too hard and you lose EVERYTHING."
-
-[V.A.L.U. quote overlay]
-"Your AI boss calls this a 'Spontaneous Unscheduled Asset Liquidation Event.'"
-
-[Title screen]
-"Play free. In your browser. Right now."
-
-**Caption:** Do you extract early or push your luck? 🎰💀 #gaming #indiedev #idlegame #riskreward
+**Caption:** V.A.L.U. is an HR department that gained sentience and I'm terrified #gaming #aicompanion #corporatehumor
 
 ---
 
-### TikTok 4: "Dialogue Choices That Go Hard"
+### TikTok 4 — "POV: You Just Got Hired" (15s, duet bait)
 
-**Format:** Quick-cut dialogue showcase
-**Duration:** 15–20 seconds (short-form)
-**Audio:** Trending sound with dramatic pause
+**Format:** Split screen potential. Left: cryo chamber. Right: empty (for duets/reactions).
 
-**Script:**
-[V.A.L.U. says you owe $1M]
+| Time | Screen | Text |
+|------|--------|------|
+| 0:00 | Cryo | *POV: your new employer's onboarding* |
+| 0:03 | V.A.L.U. greeting | *The AI is VERY enthusiastic* |
+| 0:06 | Debt reveal | *You owe $1,000,000* |
+| 0:09 | Neural consent | *You signed in your sleep* |
+| 0:12 | Max: "..." | *You have no words* |
 
-[Three choices appear — zoom on each one]
-"A million dollars?! What did I sign?!"
-"That's it? I was expecting more of a challenge."
-"Wait, I don't remember signing anything..."
+**Audio:** "It's Corn" remix beat or similar trending workplace audio.
 
-[Text overlay: "which one are you?"]
-
-**Caption:** Comment your pick 👇 #gaming #dialoguechoices #indiegame
+**Caption:** duet this with your reaction when you read your first employment contract #pov #gaming #corporate
 
 ---
 
-### TikTok 5: "Things My AI Boss Has Said"
+### TikTok 5 — "The Art Direction" (15s, no text, pure visual)
 
-**Format:** Text overlay compilation with gameplay background
-**Duration:** 30 seconds
-**Audio:** "Oh No" sound or similar
+**Format:** Slow pan across game art. No text overlays. Just vibes.
 
-**Script:**
-[Text cards cycling over gameplay footage:]
+| Time | Visual |
+|------|--------|
+| 0:00 | Title screen — space station, neon cyan title |
+| 0:04 | Cryo chamber — pastel interior, sleeping crew |
+| 0:08 | Hub — isometric grid, floating derelicts |
+| 0:12 | Space viewport — parallax debris field |
 
-"Your neural pattern consented during the onboarding flash. Perfectly legal!"
+**Audio:** Lo-fi space ambient or chill synth. Let the art speak.
 
-"Memory gaps are a common side effect of cryo-storage!"
-
-"Your signature was digitally captured during your REM cycle."
-
-"The Company calls it 'dream-optimized onboarding'!"
-
-"They came with the facility! Think of them as... part of your compensation package. (They're actually leased.)"
-
-"Time is a construct, Max! But if you MUST know... long enough for significant compound interest to accumulate!"
-
-[Final text: "Sector Scavengers — play free in browser"]
-
-**Caption:** V.A.L.U. is NOT okay 😭 #gaming #indiedev #aicompanion #corporatehumor #darkhumor
+**Caption:** what if corporate dystopia was beautiful #gamedev #indiegame #artdirection #aesthetic
 
 ---
 
-## KEY ASSETS TO ATTACH
+## 5. POSTING PLAYBOOK
 
-| Platform | Recommended Assets |
-|----------|-------------------|
-| Reddit | Title screen, cryo chamber, hub gameplay, debt dialogue |
-| Twitter | Title screen (hero), dialogue screenshots, hub gameplay |
-| TikTok | Screen recordings of tutorial flow, hub gameplay, choice dialogue |
+### Week 1 — Narrative Hook
 
-## HASHTAGS BY PLATFORM
+| Day | Platform | Content | Goal |
+|-----|----------|---------|------|
+| Mon | Twitter | Thread (Orientation) | Establish the world. Quote-tweets. |
+| Mon | TikTok | "dream-optimized onboarding" (TikTok 1) | Viral hook. Duet bait. |
+| Tue | Reddit | r/gaming — "trust issues" post | Comments quoting V.A.L.U. |
+| Wed | Twitter | Tweet A (unhinged line) | Meme potential. |
+| Thu | Reddit | r/indiegames — art post | Visual hook for different audience. |
+| Fri | TikTok | "35%" (TikTok 2) | Gameplay hook. Risk/reward. |
 
-**Twitter/X:** #indiedev #gamedev #indiegame #SectorScavengers #browsergame #idlegame
-**TikTok:** #indiedev #gamedev #gaming #indiegame #browsergame #corporatehumor #darkhumor #dystopia
-**Reddit:** Use subreddit-appropriate flairs; no hashtags needed
+### Week 2 — Gameplay + Community
 
----
-
-## POSTING STRATEGY
-
-| Priority | Platform | Subreddit/Account | Post Type |
-|----------|----------|-------------------|-----------|
-| 1 | Reddit | r/incremental_games | Detailed gameplay post |
-| 2 | Reddit | r/WebGames | Play link + feature list |
-| 3 | Twitter | Main account | Launch thread (3 tweets) |
-| 4 | TikTok | — | "Most Unhinged AI" (TikTok 1) |
-| 5 | Reddit | r/indiegames | Art + narrative showcase |
-| 6 | Twitter | — | Engagement bait (Tweet D) |
-| 7 | TikTok | — | "POV: Job Orientation" (TikTok 2) |
-| 8 | Reddit | r/gaming | Viral dialogue screenshot |
-| 9 | TikTok | — | "Punishes Greed" (TikTok 3) |
-| 10 | Reddit | r/gamedev | Art/tech showcase |
+| Day | Platform | Content | Goal |
+|-----|----------|---------|------|
+| Mon | Reddit | r/incremental_games — gameplay deep-dive | Core audience conversion. |
+| Tue | TikTok | "Things V.A.L.U. Has Said" (TikTok 3) | Shareability. Stitch bait. |
+| Wed | Twitter | Tweet B (engagement trap — pick your response) | Replies. Algorithm boost. |
+| Thu | Reddit | r/WebGames — technical showcase | Dev community. Play link. |
+| Fri | TikTok | "The Art Direction" (TikTok 5) | Aesthetic audience. Saves. |
+| Sat | Twitter | Tweet E (too realistic) | Relatable humor crossover. |
