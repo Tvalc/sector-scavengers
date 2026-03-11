@@ -25,6 +25,8 @@ import { SaveManager } from '../save/save-manager';
 import { CryoState } from '../systems/cryo-system';
 import { Mission } from '../types/mission';
 import { CrewMember } from '../types/crew';
+import { getItemById, Item } from '../types/items';
+import { addItem } from '../types/inventory';
 
 /**
  * Game flow states
@@ -260,6 +262,20 @@ export class Game {
     
     const run = this.state.currentRun;
     const targetId = run.targetShipId;
+    
+    // Transfer collected items to player inventory (if run didn't collapse)
+    if (!run.collapsed && run.collectedItems.length > 0) {
+      console.log(`[Game] Transferring ${run.collectedItems.length} items to inventory`);
+      for (const itemId of run.collectedItems) {
+        const item = getItemById(itemId);
+        if (item) {
+          addItem(this.state.inventory, item);
+          console.log(`[Game] Added ${item.name} to inventory`);
+        } else {
+          console.warn(`[Game] Unknown item ID: ${itemId}`);
+        }
+      }
+    }
     
     // Handle persisted ship logic
     if (targetId !== null) {

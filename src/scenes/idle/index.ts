@@ -92,7 +92,7 @@ export class IdleScene implements Scene {
     this.missionSystem = new MissionSystem(game.state);
 
     this.background = new BackgroundRenderer();
-    this.debugger = new NodeDebugger();
+    this.debugger = new NodeDebugger(game);
     this.uiRenderer = new UIRenderer();
     this.inputHandler = new InputHandler(this.debugger);
   }

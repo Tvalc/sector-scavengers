@@ -10,11 +10,17 @@ import { SHIP_POSITIONS } from '../../systems/hub-system';
 
 /**
  * NodeDebugger provides interactive node position calibration
+ * and debug cheats for testing
  */
 export class NodeDebugger {
   private enabled: boolean = false;
   private debugPositions: Array<{ x: number; y: number }> = [];
   private selectedNodeIndex: number = 0;
+  private game: any; // Reference to Game for cheats
+
+  constructor(game?: any) {
+    this.game = game;
+  }
 
   /** Check if debugger is active */
   get isEnabled(): boolean {
@@ -27,6 +33,12 @@ export class NodeDebugger {
     if (this.enabled) {
       this.debugPositions = [...SHIP_POSITIONS];
       console.log('[DEBUG] Ship position debugger enabled');
+      console.log('[DEBUG] Cheat keys:');
+      console.log('  E = +100 energy');
+      console.log('  Shift+E = +1000 energy');
+      console.log('  M = Max energy (1000)');
+      console.log('  C = +10 power cells');
+      console.log('  Shift+C = +50 power cells');
     } else {
       console.log('[DEBUG] Ship position debugger disabled');
     }
@@ -58,7 +70,48 @@ export class NodeDebugger {
       console.log('[DEBUG] Reset to original positions');
     }
 
+    // Debug cheats
+    this.handleCheats(input);
+
     return true; // Input consumed
+  }
+
+  /** Handle debug cheat keys */
+  private handleCheats(input: typeof MakkoEngine.input): void {
+    if (!this.game || !this.game.state) return;
+
+    const isShift = input.isKeyDown('ShiftLeft') || input.isKeyDown('ShiftRight');
+
+    // E = Add energy
+    if (input.isKeyPressed('KeyE')) {
+      const amount = isShift ? 1000 : 100;
+      const oldEnergy = this.game.state.energy;
+      this.game.addEnergy(amount);
+      const gained = this.game.state.energy - oldEnergy;
+      console.log(`[DEBUG] Added ${gained} energy (now: ${this.game.state.energy})`);
+    }
+
+    // M = Max energy
+    if (input.isKeyPressed('KeyM')) {
+      const oldEnergy = this.game.state.energy;
+      this.game.state.energy = 1000; // Max cap
+      const gained = this.game.state.energy - oldEnergy;
+      console.log(`[DEBUG] Maxed energy: ${oldEnergy} → ${this.game.state.energy} (+${gained})`);
+    }
+
+    // C = Add power cells
+    if (input.isKeyPressed('KeyC')) {
+      const amount = isShift ? 50 : 10;
+      this.game.state.resources.powerCells += amount;
+      console.log(`[DEBUG] Added ${amount} power cells (now: ${this.game.state.resources.powerCells})`);
+    }
+
+    // G = Add death currency (Scrap)
+    if (input.isKeyPressed('KeyG')) {
+      const amount = isShift ? 100 : 10;
+      this.game.state.deathCurrency += amount;
+      console.log(`[DEBUG] Added ${amount} Scrap (now: ${this.game.state.deathCurrency})`);
+    }
   }
 
   private handleNodeSelection(input: typeof MakkoEngine.input): void {
@@ -173,8 +226,8 @@ export class NodeDebugger {
   private renderPanel(display: IDisplay): void {
     const panelX = 20;
     const panelY = 200;
-    const panelWidth = 300;
-    const panelHeight = 220;
+    const panelWidth = 320;
+    const panelHeight = 340;
 
     display.drawRoundRect(panelX, panelY, panelWidth, panelHeight, 10, {
       fill: '#000000',
@@ -185,30 +238,85 @@ export class NodeDebugger {
       lineWidth: 2
     });
 
-    display.drawText('NODE DEBUGGER', panelX + 10, panelY + 25, {
+    display.drawText('DEBUG MODE', panelX + 10, panelY + 25, {
       font: 'bold 18px monospace',
       fill: '#00ff00'
     });
 
+    // Current resources (if game available)
+    let yOffset = 50;
+    if (this.game && this.game.state) {
+      const state = this.game.state;
+      const resources = [
+        `Energy: ${Math.floor(state.energy)}/1000`,
+        `Power Cells: ${state.resources?.powerCells || 0}`,
+        `Scrap: ${state.deathCurrency || 0}`,
+        `Deck Progress: ${state.deckUnlockProgress || 0}%`
+      ];
+      
+      resources.forEach((text, idx) => {
+        display.drawText(text, panelX + 10, panelY + yOffset + idx * 16, {
+          font: '12px monospace',
+          fill: '#ffff00'
+        });
+      });
+      yOffset += resources.length * 16 + 10;
+    }
+
+    // Divider
+    display.drawLine(panelX + 10, panelY + yOffset, panelX + panelWidth - 10, panelY + yOffset, {
+      stroke: '#00ff00',
+      lineWidth: 1,
+      alpha: 0.5
+    });
+    yOffset += 10;
+
+    // Node debugger section
     const pos = this.debugPositions[this.selectedNodeIndex];
-    const instructions = [
-      `Selected: Node ${this.selectedNodeIndex}`,
-      `Position: (${Math.round(pos.x)}, ${Math.round(pos.y)})`,
+    const nodeInstructions = [
+      `Node ${this.selectedNodeIndex}: (${Math.round(pos.x)}, ${Math.round(pos.y)})`,
       this.getMouseInfo(),
       '',
+      'NODE CONTROLS:',
       'Click: Place node',
       '0-9: Select node 0-9',
-      'Shift+0-5: Select node 10-15',
-      'Arrows: Nudge (+Shift: 10px)',
-      'P: Print positions to console',
-      'R: Reset positions',
+      'Shift+0-5: Select 10-15',
+      'Arrows: Nudge (Shift: 10px)',
+      'P: Print positions',
+      'R: Reset positions'
+    ];
+
+    nodeInstructions.forEach((text, idx) => {
+      const isHeader = text.includes('CONTROLS');
+      display.drawText(text, panelX + 10, panelY + yOffset + idx * 14, {
+        font: isHeader ? 'bold 11px monospace' : '11px monospace',
+        fill: isHeader ? '#00ffff' : '#ffffff'
+      });
+    });
+    yOffset += nodeInstructions.length * 14 + 10;
+
+    // Cheat section
+    display.drawLine(panelX + 10, panelY + yOffset, panelX + panelWidth - 10, panelY + yOffset, {
+      stroke: '#00ff00',
+      lineWidth: 1,
+      alpha: 0.5
+    });
+    yOffset += 10;
+
+    const cheatInstructions = [
+      'CHEATS:',
+      'E: +100 energy (Shift: +1000)',
+      'M: Max energy',
+      'C: +10 power cells (Shift: +50)',
+      'G: +10 Scrap (Shift: +100)',
       'D: Exit debugger'
     ];
 
-    instructions.forEach((text, idx) => {
-      display.drawText(text, panelX + 10, panelY + 50 + idx * 16, {
-        font: '12px monospace',
-        fill: '#ffffff'
+    cheatInstructions.forEach((text, idx) => {
+      const isHeader = text.includes('CHEATS');
+      display.drawText(text, panelX + 10, panelY + yOffset + idx * 14, {
+        font: isHeader ? 'bold 11px monospace' : '11px monospace',
+        fill: isHeader ? '#ff00ff' : '#ffffff'
       });
     });
   }
