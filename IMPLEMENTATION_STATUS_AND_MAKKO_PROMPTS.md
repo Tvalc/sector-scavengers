@@ -23,6 +23,125 @@ It also provides the exact **Makko prompt sequence** to finish implementation wi
 
 ---
 
+## Single Master Prompt To Paste Into Makko
+
+Use the prompt below if you want **one entry point** instead of manually feeding Makko each numbered prompt.
+
+```text
+You are working in the Sector Scavengers repository.
+
+Your job is to bring the live game implementation into alignment with the intended design described in:
+- NARRATIVE_REWORK.md
+- character_bible.md
+- Debt_loop_and_sector_arc.md
+- IMPLEMENTATION_STATUS_AND_MAKKO_PROMPTS.md
+
+Before making any changes, read all four files above plus the current codebase hot-path files that they reference.
+
+IMPORTANT OPERATING RULES
+
+1. Treat IMPLEMENTATION_STATUS_AND_MAKKO_PROMPTS.md as the current truth source for:
+   - what is implemented
+   - what is partial
+   - what is missing
+
+2. Do not assume a feature is complete just because a design doc says it is.
+   You must verify the live code before acting.
+
+3. Do not skip ahead to later-stage features if earlier foundational items are incomplete.
+
+4. Keep file count low.
+   Prefer extending existing hot-path files over creating new architecture.
+
+5. Keep the implementation Makko-safe:
+   - one mutable Game.state
+   - manual save/load in src/game/game.ts
+   - scene-local, imperative UI
+   - fixed 1920x1080 layout assumptions
+   - existing cryo / mission / idle / results surfaces
+
+6. After each completed stage:
+   - update NARRATIVE_REWORK.md honestly
+   - reflect real completion status only
+   - document changed files
+   - commit and push
+
+7. Never mark a system complete unless:
+   - it exists in runtime
+   - it is visible or mechanically consequential to the player
+   - it is persisted if it affects progression
+   - the docs now truthfully reflect the implementation
+
+EXECUTION PLAN
+
+Execute the work in the exact order defined in IMPLEMENTATION_STATUS_AND_MAKKO_PROMPTS.md:
+
+Step 1. Reality reset and source-of-truth cleanup
+- verify/fix persistence gaps
+- verify/fix shipClaimProgress persistence
+- verify/fix stale terminology and cryo wake-cost mismatches
+- verify crew source of truth
+- update docs to match reality
+
+Step 2. Make debt a real gameplay system
+- turn debt from a UI/story shell into an actual macro loop
+- make debt mutate through gameplay
+- make billing and thresholds matter
+
+Step 3. Finish debt-gated recruit waking
+- make authored recruits materially interact with debt
+- enforce debt gating cleanly in cryo flow
+
+Step 4. Implement the actual authored cast
+- add the first real set of named recruits from character_bible.md
+- do not stop at support hooks only
+
+Step 5. Add recruitment missions and arrival beats
+- make named recruits feel acquired through story, not just flagged
+
+Step 6. Implement lead selection and companion slots
+- one selected lead
+- two companion slots
+- persistent, visible, and used by runs
+
+Step 7. Make runs feel different by character
+- lead-specific differences
+- companion-specific effects
+- real run consequences
+
+Step 8. Make sector progression materially change the world
+- sectors must change content, not just a number
+
+Step 9. Finish narrative reactivity
+- debt, recruit, sector, and aftermath reactions using existing surfaces first
+
+Step 10. Implement doctrine / route identity
+- begin the “are we the corporation?” layer as a real system
+
+Step 11. Implement endgame routes and endings
+- make the game have an actual narrative destination
+
+Step 12. Final truth pass
+- re-audit code vs docs
+- correct docs and status honestly
+- leave a reliable source of truth
+
+DELIVERY REQUIREMENTS
+
+At each stage:
+- explain what was actually implemented
+- explain what remains partial
+- name the files changed
+- run validation/build if available
+- commit and push before moving on
+
+If you discover that a later step depends on an incomplete earlier step, stop and finish the earlier dependency first.
+
+If a design target is too large for one pass, implement the smallest real player-facing version and document exactly what remains.
+```
+
+---
+
 ## Executive Summary
 
 The game is no longer just an early prototype.
