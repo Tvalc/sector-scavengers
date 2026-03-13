@@ -276,6 +276,48 @@ export class StoryState {
     return this.getVariable('missions_completed_total');
   }
 
+  /**
+   * Increment consecutive debt ceiling violations counter
+   */
+  incrementConsecutiveDebtOverCeiling(): void {
+    this.incrementVariable('consecutive_debt_over_ceiling');
+  }
+
+  /**
+   * Get consecutive debt ceiling violations count
+   */
+  getConsecutiveDebtOverCeiling(): number {
+    return this.getVariable('consecutive_debt_over_ceiling');
+  }
+
+  /**
+   * Reset consecutive debt ceiling violations counter
+   */
+  resetConsecutiveDebtOverCeiling(): void {
+    this.setVariable('consecutive_debt_over_ceiling', 0);
+  }
+
+  /**
+   * Increment consecutive hull collapses counter
+   */
+  incrementConsecutiveCollapses(): void {
+    this.incrementVariable('consecutive_collapses');
+  }
+
+  /**
+   * Get consecutive hull collapses count
+   */
+  getConsecutiveCollapses(): number {
+    return this.getVariable('consecutive_collapses');
+  }
+
+  /**
+   * Reset consecutive hull collapses counter
+   */
+  resetConsecutiveCollapses(): void {
+    this.setVariable('consecutive_collapses', 0);
+  }
+
   // ============================================================================
   // Serialization (for save/load)
   // ============================================================================

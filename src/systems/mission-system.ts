@@ -2,12 +2,16 @@
  * Mission System
  * 
  * Manages idle missions that crew can be sent on for resource generation.
+ * Doctrine effects:
+ * - Corporate: Access to company contracts (higher rewards, lower risk)
+ * - Cooperative: Access to co-op missions (crew bonuses, low danger)
+ * - Smuggler: Access to black market missions (high rewards, high risk)
  */
 
-import { Mission, MissionType, generateMission } from '../types/mission';
+import { Mission, MissionType, MissionSource, generateMission } from '../types/mission';
 import { CrewMember, CrewRole } from '../types/crew';
 import { Resources, addResources } from '../types/resources';
-import { GameState } from '../types/state';
+import { GameState, DoctrineType } from '../types/state';
 
 /**
  * MissionSystem - manages idle missions
@@ -21,15 +25,58 @@ export class MissionSystem {
   
   /**
    * Generate available missions pool (called periodically)
+   * Includes doctrine-specific missions based on locked doctrine
    */
   generateAvailableMissions(count: number = 3): Mission[] {
     const missions: Mission[] = [];
+    const doctrine = this.gameState.meta.doctrine;
     
-    for (let i = 0; i < count; i++) {
+    // Always generate some standard missions
+    const standardCount = Math.max(1, count - 2);
+    for (let i = 0; i < standardCount; i++) {
       missions.push(generateMission());
     }
     
+    // Add doctrine-specific missions if doctrine is locked
+    if (doctrine) {
+      const doctrineMissionCount = Math.min(2, count - standardCount);
+      for (let i = 0; i < doctrineMissionCount; i++) {
+        const mission = this.generateDoctrineMission(doctrine);
+        if (mission) {
+          missions.push(mission);
+        }
+      }
+    }
+    
     return missions;
+  }
+  
+  /**
+   * Generate a doctrine-specific mission
+   */
+  private generateDoctrineMission(doctrine: DoctrineType): Mission | null {
+    switch (doctrine) {
+      case 'corporate':
+        // Company contracts: Patrol or Trade with company source
+        const companyTypes = [MissionType.Patrol, MissionType.Trade];
+        const companyType = companyTypes[Math.floor(Math.random() * companyTypes.length)];
+        return generateMission(companyType, 'company');
+        
+      case 'cooperative':
+        // Co-op missions: Trade or Exploration with co_op source
+        const coopTypes = [MissionType.Trade, MissionType.Exploration];
+        const coopType = coopTypes[Math.floor(Math.random() * coopTypes.length)];
+        return generateMission(coopType, 'co_op');
+        
+      case 'smuggler':
+        // Black market missions: Exploration or Salvage with black_market source
+        const blackMarketTypes = [MissionType.Exploration, MissionType.Salvage];
+        const blackMarketType = blackMarketTypes[Math.floor(Math.random() * blackMarketTypes.length)];
+        return generateMission(blackMarketType, 'black_market');
+        
+      default:
+        return null;
+    }
   }
   
   /**

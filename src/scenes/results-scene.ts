@@ -1,7 +1,7 @@
 /**
  * Results Scene
  * 
- * End-of-run summary with tweet receipt button,
+ * End-of-run summary with broadcast receipt button,
  * Play.fun claim button, and return to idle.
  */
 
@@ -12,6 +12,7 @@ import { playFunService, ClaimItem } from '../services/playfun-service';
 import { SocialMultiplierSystem } from '../systems/social-multiplier-system';
 import { MAX_ROUNDS } from '../types/state';
 import { COLORS, FONTS, LAYOUT } from '../ui/theme';
+import { getAuthoredRecruit } from '../types/crew';
 
 /**
  * Additional colors specific to results scene
@@ -37,7 +38,7 @@ export class ResultsScene implements Scene {
   private hoveredButton: string | null = null;
 
   // Button bounds
-  private tweetButtonBounds = { x: 680, y: 700, width: 280, height: 60 };
+  private broadcastButtonBounds = { x: 680, y: 700, width: 280, height: 60 };
   private claimButtonBounds = { x: 980, y: 700, width: 280, height: 60 };
   private returnButtonBounds = { x: 860, y: 900, width: 200, height: 60 };
 
@@ -72,9 +73,9 @@ export class ResultsScene implements Scene {
     this.hoveredButton = null;
 
     if (mouseX !== undefined && mouseY !== undefined) {
-      // Check Tweet button
-      if (this.isPointInBounds(mouseX, mouseY, this.tweetButtonBounds)) {
-        this.hoveredButton = 'tweet';
+      // Check Broadcast button
+      if (this.isPointInBounds(mouseX, mouseY, this.broadcastButtonBounds)) {
+        this.hoveredButton = 'broadcast';
         MakkoEngine.display.setCursor('pointer');
         if (input.isMousePressed(0)) {
           this.shareResults();
@@ -245,11 +246,94 @@ export class ResultsScene implements Scene {
       alpha: 0.5
     });
 
-    // Rewards summary
-    this.renderRewardsSummary(display, run);
+    // Rewards summary - returns bottom Y of panel
+    const panelBottom = this.renderRewardsSummary(display, run);
 
-    // Viral multiplier status
-    this.renderMultiplierStatus(display);
+    // Viral multiplier status - positioned below rewards panel
+    const multiplierY = panelBottom + 40;
+    this.renderMultiplierStatus(display, multiplierY);
+
+    // Ability trigger summary - positioned below multiplier status
+    const abilityY = multiplierY + 60;
+    this.renderAbilitySummary(display, run, abilityY);
+  }
+  
+  /**
+   * Render ability trigger summary showing which abilities activated
+   */
+  private renderAbilitySummary(display: typeof MakkoEngine.display, run: typeof this.game.state.currentRun, startY: number): void {
+    if (!run) return;
+    
+    const { width } = display;
+    const lineHeight = 28;
+    
+    const abilities: string[] = [];
+    
+    // Check each ability usage flag
+    if (run.abilityUsage.workingMemoryUsed) {
+      abilities.push("MAX'S WORKING MEMORY: Hand rerolled for better options");
+    }
+    if (run.abilityUsage.triageUsed) {
+      abilities.push("IMANI'S TRIAGE PROTOCOL: Crew saved from hull breach");
+    }
+    if (run.abilityUsage.fieldRetrofitUsed) {
+      abilities.push("JAX'S FIELD RETROFIT: Breach stabilized at 50% hull");
+    }
+    if (run.abilityUsage.signalTraceUsed) {
+      abilities.push("SERA'S SIGNAL TRACE: Hidden cache revealed");
+    }
+    if (run.abilityUsage.deadDropUsed) {
+      abilities.push(`ROOK'S DEAD DROP: ${Math.floor(run.bankedRewards)} energy banked safely`);
+    }
+    if (run.abilityUsage.ghostCredentialUsed) {
+      abilities.push("DEL'S GHOST CREDENTIAL: Ship action authorized");
+    }
+    
+    // Check passive bonuses
+    const bonusMessages: string[] = [];
+    if (run.appliedPassiveBonuses.shieldBonus > 0) {
+      bonusMessages.push(`+${run.appliedPassiveBonuses.shieldBonus} SHIELD`);
+    }
+    if (run.appliedPassiveBonuses.repairBonus > 0) {
+      bonusMessages.push(`+${run.appliedPassiveBonuses.repairBonus}% Repair`);
+    }
+    if (run.appliedPassiveBonuses.discoveryBonus > 0) {
+      bonusMessages.push(`+${run.appliedPassiveBonuses.discoveryBonus}% Discovery`);
+    }
+    if (run.appliedPassiveBonuses.extractionBonus > 0) {
+      bonusMessages.push(`+${run.appliedPassiveBonuses.extractionBonus}% Extraction`);
+    }
+    
+    if (abilities.length === 0 && bonusMessages.length === 0) return;
+    
+    // Panel header
+    display.drawText('ABILITIES ACTIVATED', width / 2, startY, {
+      font: FONTS.labelFont,
+      fill: COLORS.neonMagenta,
+      align: 'center'
+    });
+    
+    let y = startY + 30;
+    
+    // Render passive bonuses
+    if (bonusMessages.length > 0) {
+      display.drawText(`Passive: ${bonusMessages.join(' | ')}`, width / 2, y, {
+        font: FONTS.smallFont,
+        fill: COLORS.dimText,
+        align: 'center'
+      });
+      y += lineHeight;
+    }
+    
+    // Render active abilities
+    for (const ability of abilities) {
+      display.drawText(ability, width / 2, y, {
+        font: FONTS.smallFont,
+        fill: COLORS.neonCyan,
+        align: 'center'
+      });
+      y += lineHeight;
+    }
   }
 
   private renderCollapsedState(display: typeof MakkoEngine.display, run: typeof this.game.state.currentRun): void {
@@ -320,13 +404,37 @@ export class ResultsScene implements Scene {
     }
   }
 
-  private renderRewardsSummary(display: typeof MakkoEngine.display, run: typeof this.game.state.currentRun): void {
-    if (!run) return;
+  private renderRewardsSummary(display: typeof MakkoEngine.display, run: typeof this.game.state.currentRun): number {
+    if (!run) return 500;
 
     const { width } = display;
     const summaryY = 250;
     const panelWidth = 500;
-    const panelHeight = 280;
+    const lineHeight = 24;
+
+    // Calculate required panel height based on content
+    const playerShips = this.game.state.spacecraft.filter(s => s.owner === 'player');
+    const shipCount = Math.min(playerShips.length, 5);
+    const hasMoreShips = playerShips.length > 5;
+    const hasItems = run.collectedItems.length > 0;
+
+    // Base height calculation:
+    // - Header: 34 (label + gap)
+    // - Ships section: (shipCount + hasMoreShips) * 24
+    // - Gap after ships: 10
+    // - TOTAL section: 30
+    // - Items section (if any): 40
+    // - Rounds: 35
+    // - Sector: 30
+    // - Debt service: 35
+    // - Billing: 25
+    // - Debt status: 30
+    // - Top padding: 30
+    // - Bottom padding: 20
+    const baseHeight = 34 + 10 + 30 + 35 + 30 + 35 + 25 + 30 + 30 + 20;
+    const shipsHeight = (shipCount === 0 ? 1 : shipCount) * lineHeight + (hasMoreShips ? lineHeight : 0);
+    const itemsHeight = hasItems ? 40 : 0;
+    const panelHeight = baseHeight + shipsHeight + itemsHeight;
 
     // Summary panel background with rounded corners
     display.drawRoundRect(width / 2 - 250, summaryY - 30, panelWidth, panelHeight, LAYOUT.borderRadiusLarge, {
@@ -334,10 +442,7 @@ export class ResultsScene implements Scene {
       alpha: 0.5
     });
 
-    // Salvaged ships breakdown
-    const playerShips = this.game.state.spacecraft.filter(s => s.owner === 'player');
     let lineY = summaryY;
-    const lineHeight = 24;
 
     display.drawText('SALVAGED SHIPS:', width / 2, lineY, {
       font: FONTS.labelFont,
@@ -422,19 +527,58 @@ export class ResultsScene implements Scene {
     
     // Debt service message (narrative context for debt payment)
     lineY += 35;
-    const debtServiced = run ? Math.floor(run.extractedRewards * 0.1) : 0; // 10% of rewards go to debt
+    const debtServiced = run && !run.collapsed && run.extractedRewards > 0 ? Math.floor(run.extractedRewards * 0.1) : 0; // 10% of rewards go to debt
     if (debtServiced > 0) {
-      display.drawText(`Debt serviced: -${debtServiced}`, width / 2, lineY, {
+      display.drawText(`Debt serviced: -${this.game.formatCurrency(debtServiced)}`, width / 2, lineY, {
+        font: FONTS.smallFont,
+        fill: COLORS.neonCyan,
+        align: 'center'
+      });
+    } else if (run?.collapsed) {
+      display.drawText('No debt payment (run failed)', width / 2, lineY, {
         font: FONTS.smallFont,
         fill: COLORS.warningYellow,
         align: 'center'
       });
     }
+    
+    // Billing cycle status
+    lineY += 25;
+    const billingProgress = this.game.state.meta.billingTimer;
+    const cycleMessage = billingProgress >= 2 
+      ? `BILLING DUE NEXT RUN (${billingProgress}/3)`
+      : `Billing cycle: ${billingProgress}/3`;
+    const cycleColor = billingProgress >= 2 ? COLORS.warningYellow : COLORS.dimText;
+    display.drawText(cycleMessage, width / 2, lineY, {
+      font: FONTS.smallFont,
+      fill: cycleColor,
+      align: 'center'
+    });
+    
+    // Debt status
+    lineY += 30;
+    const debtRatio = this.game.getDebtRatio();
+    const debtPercent = Math.round(debtRatio * 100);
+    const formattedDebt = this.game.formatCurrency(this.game.state.meta.debt);
+    const formattedCeiling = this.game.formatCurrency(this.game.state.meta.debtCeiling);
+    
+    let debtColor: string = COLORS.dimText;
+    if (debtPercent >= 100) debtColor = COLORS.warningRed;
+    else if (debtPercent >= 90) debtColor = COLORS.warningYellow;
+    else if (debtPercent >= 80) debtColor = '#ffaa00';
+    
+    display.drawText(`DEBT: ${formattedDebt} / ${formattedCeiling} (${debtPercent}%)`, width / 2, lineY, {
+      font: FONTS.labelFont,
+      fill: debtColor,
+      align: 'center'
+    });
+
+    // Return bottom Y of panel for positioning subsequent elements
+    return summaryY - 30 + panelHeight;
   }
 
-  private renderMultiplierStatus(display: typeof MakkoEngine.display): void {
+  private renderMultiplierStatus(display: typeof MakkoEngine.display, statusY: number): void {
     const { width } = display;
-    const statusY = 500;
 
     const status = this.socialSystem.getStatus();
 
@@ -477,13 +621,13 @@ export class ResultsScene implements Scene {
   private renderButtons(display: typeof MakkoEngine.display, run: typeof this.game.state.currentRun): void {
     // Only show tweet and claim buttons if not collapsed
     if (!run?.collapsed) {
-      // Tweet Receipt button
+      // Broadcast Receipt button
       this.renderButton(
         display,
-        this.tweetButtonBounds,
-        'TWEET RECEIPT',
+        this.broadcastButtonBounds,
+        'BROADCAST RECEIPT',
         RESULTS_COLORS.twitterBlue,
-        this.hoveredButton === 'tweet'
+        this.hoveredButton === 'broadcast'
       );
 
       // Claim button (disabled if can't claim)

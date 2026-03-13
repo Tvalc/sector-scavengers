@@ -19,7 +19,10 @@ import { getModalPosition, renderModalBackground, renderModalTitle, renderPowerC
 export function renderCryoPanel(
   display: IDisplay,
   crew: CrewMember[],
-  powerCells: number
+  powerCells: number,
+  currentDebt: number = 0,
+  debtCeiling: number = Infinity,
+  isDebtLocked: boolean = false
 ): void {
   resetButtonTracking();
   
@@ -29,18 +32,33 @@ export function renderCryoPanel(
   renderModalTitle(display, modalX, modalY, 'CRYO CHAMBER');
   renderPowerCellCount(display, modalX, modalY, powerCells);
   
+  // Debt locked warning
+  if (isDebtLocked) {
+    display.drawRoundRect(modalX + PADDING, modalY + 85, MODAL_WIDTH - (PADDING * 2), 40, LAYOUT.borderRadiusSmall, {
+      fill: '#220000',
+      stroke: COLORS.warningRed,
+      lineWidth: 2
+    });
+    display.drawText('⚠ DEBT CEILING REACHED - Cannot wake crew', modalX + MODAL_WIDTH / 2, modalY + 105, {
+      font: FONTS.labelFont,
+      fill: COLORS.warningRed,
+      align: 'center',
+      baseline: 'middle'
+    });
+  }
+  
   // Separate crew
   const frozenCrew = crew.filter(c => !c.awake);
   const awakeCrew = crew.filter(c => c.awake);
   
-  // Frozen section
-  const frozenStartY = modalY + 145;
+  // Frozen section (shift down if debt warning shown)
+  const frozenStartY = modalY + (isDebtLocked ? 145 : 115);
   renderSectionHeader(display, modalX + PADDING, frozenStartY, 'FROZEN CREW');
   
   if (frozenCrew.length === 0) {
     renderEmptyState(display, modalX + PADDING, frozenStartY + 35, 'No crew in cryo storage');
   } else {
-    renderFrozenCrewList(display, modalX + PADDING, frozenStartY + 30, frozenCrew, powerCells, awakeCrew.length);
+    renderFrozenCrewList(display, modalX + PADDING, frozenStartY + 30, frozenCrew, powerCells, awakeCrew.length, currentDebt, debtCeiling, isDebtLocked);
   }
   
   // Awake section

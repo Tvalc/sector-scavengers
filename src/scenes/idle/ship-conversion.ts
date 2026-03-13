@@ -93,11 +93,33 @@ export function performShipConversion(game: Game, shipId: number): ConversionRes
     };
   }
   
+  // Check debt lock FIRST - blocks conversion at ceiling
+  if (game.isDebtLocked()) {
+    console.log('[Conversion] Failed: Debt ceiling reached');
+    return {
+      success: false,
+      message: 'DEBT CEILING REACHED - Cannot convert ships',
+      duration: 3000
+    };
+  }
+  
   const cryoState = game.state.cryoState;
   const hasEngineer = hasAssignedEngineer(cryoState, shipId);
   const hasEngineeringBay = ship.rooms.some(r => r.type === 'engineering');
   const conversionCost = calculateConversionCost(ship.shipClass);
   const availablePowerCells = game.state.resources.powerCells;
+  
+  // Check if conversion permit would exceed debt ceiling
+  const PERMIT_COST = 250000;
+  const newDebt = game.state.meta.debt + PERMIT_COST;
+  if (newDebt > game.state.meta.debtCeiling) {
+    console.log('[Conversion] Failed: Would exceed debt ceiling');
+    return {
+      success: false,
+      message: `Cannot convert - permit would exceed debt ceiling (need ${PERMIT_COST.toLocaleString()} space)`,
+      duration: 3000
+    };
+  }
   
   // Validate requirements
   if (!hasEngineeringBay) {
@@ -133,17 +155,24 @@ export function performShipConversion(game: Game, shipId: number): ConversionRes
   ship.mode = 'station';
   ship.maxRooms = unlockedSlots;
   
-  console.log(`[Conversion] Ship ${shipId} converted to station (${conversionCost} power cells, ${unlockedSlots} slots)`);
+  // Add debt for conversion permit
+  game.addDebt(PERMIT_COST, `Station conversion permit (Ship ${shipId})`);
+  
+  console.log(`[Conversion] Ship ${shipId} converted to station (${conversionCost} power cells, ${unlockedSlots} slots). Permit cost: +${PERMIT_COST.toLocaleString()}`);
   
   // Save state
   game.saveState();
   
+  const permitMessage = unlockedSlots > 1 
+    ? `Ship converted to station! ${unlockedSlots} room slots unlocked. Permit: +$250,000 debt`
+    : `Ship converted to station! ${unlockedSlots} room slot unlocked. Permit: +$250,000 debt`;
+  
   return {
     success: true,
-    message: `Ship converted to station! ${unlockedSlots} room slots unlocked`,
+    message: permitMessage,
     duration: 3000
   };
-}
+ } 
 
 /**
  * Render conversion message toast

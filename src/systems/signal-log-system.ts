@@ -13,6 +13,7 @@
  */
 
 import type { IDisplay } from '@makko/engine';
+import type { DoctrineType } from '../types/state';
 
 /**
  * Headline generators - salvage network transmissions
@@ -129,6 +130,8 @@ interface Headline {
  * SignalLogSystem - scrolling headline ticker
  */
 export class SignalLogSystem {
+  // Doctrine milestone tracking
+  private doctrineMilestonesAnnounced: Set<string> = new Set();
   // Display settings
   private static readonly TICKER_Y = 1020;
   private static readonly TICKER_HEIGHT = 60;
@@ -147,8 +150,17 @@ export class SignalLogSystem {
   private headlines: Headline[] = [];
   private lastGenerationTime: number = 0;
   private displayWidth: number = 1920;
+  private measureCanvas: HTMLCanvasElement;
+  private measureCtx: CanvasRenderingContext2D;
 
   constructor() {
+    // Create reusable canvas for text measurement
+    this.measureCanvas = document.createElement('canvas');
+    const ctx = this.measureCanvas.getContext('2d');
+    if (!ctx) {
+      throw new Error('Failed to create 2D context for text measurement');
+    }
+    this.measureCtx = ctx;
     // Initialize with headlines
     for (let i = 0; i < SignalLogSystem.VISIBLE_HEADLINES + 2; i++) {
       this.generateAndAddHeadline();
@@ -173,14 +185,9 @@ export class SignalLogSystem {
   private generateAndAddHeadline(): void {
     const text = this.generateHeadline();
 
-    // Calculate width based on text
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    let width = text.length * 10; // Approximate
-    if (ctx) {
-      ctx.font = SignalLogSystem.FONT;
-      width = ctx.measureText(text).width;
-    }
+    // Calculate width using reusable context
+    this.measureCtx.font = SignalLogSystem.FONT;
+    const width = this.measureCtx.measureText(text).width;
 
     // Position after last headline
     let startX = 0;
@@ -341,13 +348,9 @@ export class SignalLogSystem {
    * Force generate a new headline immediately
    */
   addBreakingNews(text: string): void {
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    let width = text.length * 10;
-    if (ctx) {
-      ctx.font = SignalLogSystem.FONT;
-      width = ctx.measureText(text).width;
-    }
+    // Calculate width using reusable context
+    this.measureCtx.font = SignalLogSystem.FONT;
+    const width = this.measureCtx.measureText(text).width;
 
     // Add to front of queue
     this.headlines.unshift({

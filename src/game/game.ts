@@ -5,164 +5,97 @@
  * - Persistent game state (power, spacecraft, inventory, viral multiplier)
  * - Scene-based architecture via SceneManager
  * - State machine for game flow (idle → depthDive → results)
+ * 
+ * Delegates to specialized modules for domain logic.
  */
 
-import { MakkoEngine } from '@makko/engine';
 import { SceneManager } from '../scene/scene-manager';
 import { StateMachine } from '../state/state-machine';
-import { 
-  GameState, 
-  createInitialState, 
-  RunState, 
-  createRunState,
-  VIRAL_MULTIPLIER_DURATION,
-  VIRAL_MULTIPLIER_BOOST
-} from '../types/state';
-import { Spacecraft } from '../types/spacecraft';
-import { Inventory } from '../types/inventory';
-import { Resources } from '../types/resources';
-import { SaveManager } from '../save/save-manager';
-import { CryoState } from '../systems/cryo-system';
-import { Mission } from '../types/mission';
-import { CrewMember } from '../types/crew';
-import { getItemById, Item } from '../types/items';
-import { addItem } from '../types/inventory';
+import { GameState, createInitialState, DoctrineType } from '../types/state';
 import { StoryState } from '../dialogue/story-state';
-import { signalLogSystem } from '../systems/signal-log-system';
+import { SaveManager } from '../save/save-manager';
 
-/**
- * Game flow states
- */
-export const GameFlowStates = {
-  IDLE: 'idle',
-  DEPTH_DIVE: 'depthDive',
-  RESULTS: 'results'
-} as const;
-
-export type GameFlowState = typeof GameFlowStates[keyof typeof GameFlowStates];
-
-/**
- * Save data structure for Sector Scavengers
- */
-interface SectorScavengersSave {
-  version: number;
-  energy: number;
-  spacecraft: Spacecraft[];
-  inventory: Inventory;
-  viralMultiplier: number;
-  viralMultiplierExpiry: number | null;
-  totalPlayEarned: number;
-  totalExtractions: number;
-  totalCollapses: number;
-  tutorialSeen: boolean;
-  tutorialSkipped: boolean;
-  hubSelectedShips: number[];
-  persistedShips: number[];
-  resources: Resources;
-  cryoState: CryoState;
-  availableCryoPods: number;
-  activeMissions: Mission[];
-  availableMissions: Mission[];
-  completedMissionCount: number;
-  deathCurrency: number;
-  deckUnlockProgress: number;
-  nextUnlockCardId: string | null;
-  unlockedCards: string[];
-  crewRoster: CrewMember[];
-  crewAssignments: Record<number, string>;
-  meta: {
-    debt: number;
-    debtCeiling: number;
-    currentSector: number;
-    paymentDue: number | null;
-    billingTimer: number;
-  };
-  storyState: { flags: string[]; variables: [string, number][] };
-}
+import { GameFlowState, SectorScavengersSave, GameAccess } from './types';
+import { setupStateMachine, isInFlowState, getCurrentFlowState } from './state-machine-setup';
+import { GameLoop } from './game-loop';
+import { 
+  addEnergy, spendEnergy, 
+  activateViralMultiplier, updateViralMultiplier, getViralMultiplier,
+  getTotalBonus, getShip, getPlayerShips,
+  markTutorialSeen, isTutorialSeen, setTutorialSkipped, isTutorialSkipped
+} from './state-management';
+import {
+  startDepthDive, endDepthDive, returnToIdle, checkSectorUnlock,
+  setHubSelectedShips, getHubSelectedShips, clearHubSelectedShips
+} from './flow-control';
+import {
+  getAwakenedAuthoredRecruits, setSelectedLead, setCompanion,
+  getSelectedLead, getCompanionSlots
+} from './party-selection';
+import {
+  calculateDebtCeiling, applyDebtPayment, addDebt,
+  checkDebtThresholds, isDebtLocked, getDebtRatio,
+  advanceBillingCycle, formatCurrency
+} from './debt-system';
+import {
+  addDoctrinePoints, checkDoctrineLock, getDoctrineProgress,
+  hasDoctrine, isDoctrineLocked
+} from './doctrine-system';
+import { createSaveManager, saveGameState, loadGameState } from './persistence';
 
 /**
  * Main Game class
  * 
- * Manages persistent state, scene flow, and game systems.
- * Scenes access game state via the game reference passed to them.
+ * Implements GameAccess interface and delegates domain logic to modules.
  */
-export class Game {
-  private scenes = new SceneManager();
-  private stateMachine = new StateMachine<Game>();
-  private lastTime = 0;
-  private running = false;
+export class Game implements GameAccess {
+  private scenes: SceneManager = new SceneManager();
+  private stateMachine: StateMachine<Game> = new StateMachine<Game>();
+  private gameLoop: GameLoop;
+  private saveManager: SaveManager<SectorScavengersSave>;
   
   /** Fullscreen toggle callback */
   public fullscreenToggleCallback: (() => void) | null = null;
   
   /** Persistent game state */
-  public state: GameState;
+  public readonly state: GameState;
   
-  /** Narrative story state for flags and variables */
-  public storyState: StoryState;
+  /** Narrative story state */
+  public readonly storyState: StoryState;
   
-  /** Save manager for persistence */
-  private saveManager: SaveManager<SectorScavengersSave>;
-  
-  /** Singleton instance for scene access */
+  /** Singleton instance */
   private static instance: Game | null = null;
 
   constructor() {
     this.state = createInitialState();
     this.storyState = new StoryState();
-    this.saveManager = new SaveManager<SectorScavengersSave>('sector-scavengers', 1);
+    this.saveManager = createSaveManager();
+    this.gameLoop = new GameLoop(this, this.stateMachine as StateMachine<GameAccess>, null);
     Game.instance = this;
-    this.setupStateMachine();
+    setupStateMachine(this, this.stateMachine as StateMachine<GameAccess>);
   }
 
-  /**
-   * Get the game instance (for scenes to access)
-   */
   static getInstance(): Game | null {
     return Game.instance;
   }
 
-  /**
-   * Setup the game flow state machine
-   */
-  private setupStateMachine(): void {
-    // IDLE state - main hub
-    this.stateMachine.add(GameFlowStates.IDLE, {
-      enter: () => {
-        this.scenes.switchTo('idle');
-      }
-    });
+  // ============================================================================
+  // GameAccess Interface Implementation
+  // ============================================================================
 
-    // DEPTH_DIVE state - active session
-    this.stateMachine.add(GameFlowStates.DEPTH_DIVE, {
-      enter: () => {
-        // Initialize a new run
-        this.state.currentRun = createRunState();
-        this.scenes.switchTo('depthDive');
-      },
-      exit: () => {
-        // Run state cleanup happens in endDepthDive()
-      }
-    });
-
-    // RESULTS state - end of run summary
-    this.stateMachine.add(GameFlowStates.RESULTS, {
-      enter: () => {
-        this.scenes.switchTo('results');
-      },
-      exit: () => {
-        // Clear run state when leaving results
-        this.state.currentRun = null;
-      }
-    });
+  getSceneManager(): SceneManager {
+    return this.scenes;
   }
 
-  /**
-   * Initialize game and register scenes
-   */
+  getStateMachine(): StateMachine<Game> {
+    return this.stateMachine;
+  }
+
+  // ============================================================================
+  // Initialization & Lifecycle
+  // ============================================================================
+
   async init(): Promise<void> {
-    // Register all scenes
-    // Scenes will be imported when they're created
     const { StartScene } = await import('../scenes/start-scene');
     const { IdleScene } = await import('../scenes/idle');
     const { DepthDiveScene } = await import('../scenes/depth-dive-scene');
@@ -177,495 +110,139 @@ export class Game {
     await this.scenes.register(new DepthDiveScene(this));
     await this.scenes.register(new ResultsScene(this));
 
-    // Load saved state if available
-    this.loadState();
+    loadGameState(this, this.saveManager);
   }
 
-  /**
-   * Start the game loop
-   */
   start(): void {
-    this.running = true;
-    this.lastTime = performance.now();
-
-    // Always start with the title screen
+    this.gameLoop.setFullscreenCallback(this.fullscreenToggleCallback);
     this.scenes.switchTo('start');
-
-    this.gameLoop();
+    this.gameLoop.start();
   }
 
-  /**
-   * Stop the game loop
-   */
   stop(): void {
-    this.running = false;
-  }
-
-  private gameLoop(): void {
-    if (!this.running) return;
-
-    const currentTime = performance.now();
-    const dt = currentTime - this.lastTime;
-    this.lastTime = currentTime;
-
-    // Update state machine (handles automatic transitions)
-    this.stateMachine.update(dt, this);
-
-    // Delegate to scene manager
-    this.scenes.handleInput();
-    this.scenes.update(dt);
-    this.render();
-
-    requestAnimationFrame(() => this.gameLoop());
-  }
-
-  private render(): void {
-    const display = MakkoEngine.display;
-
-    display.beginFrame();
-    display.clear('#0a0e1a'); // Deep space black
-
-    // Render all scenes in stack (for overlays)
-    this.scenes.render();
-
-    display.endFrame();
-
-    // Check for fullscreen toggle (Shift+F)
-    if (this.fullscreenToggleCallback) {
-      this.fullscreenToggleCallback();
-    }
-
-    // CRITICAL: Must call at end of each frame
-    MakkoEngine.input.endFrame();
+    this.gameLoop.stop();
   }
 
   // ============================================================================
-  // Game Flow Control
+  // Flow Control
   // ============================================================================
 
-  /**
-   * Start a Depth Dive session
-   * Uses the first selected hub ship as the target for this run.
-   */
-  startDepthDive(): void {
-    if (this.state.currentRun) {
-      console.warn('[Game] Already in a Depth Dive session');
-      return;
-    }
-    
-    this.stateMachine.transition(GameFlowStates.DEPTH_DIVE, this);
-    
-    // Store the selected ship as the run target (one ship per run)
-    if (this.state.currentRun && this.state.hubSelectedShips.length > 0) {
-      this.state.currentRun.targetShipId = this.state.hubSelectedShips[0];
-      console.log(`[Game] Starting dive with target ship ${this.state.currentRun.targetShipId}`);
-    }
-  }
-
-  /**
-   * End the Depth Dive and show results
-   * Handles persisted ship logic:
-   * - If target was repaired: keep in persistedShips
-   * - If target was not repaired: remove from persistedShips (board will reset)
-   */
-  endDepthDive(): void {
-    if (!this.state.currentRun) {
-      console.warn('[Game] No active Depth Dive session');
-      return;
-    }
-    
-    const run = this.state.currentRun;
-    const targetId = run.targetShipId;
-    
-    // Transfer collected items to player inventory (if run didn't collapse)
-    if (!run.collapsed && run.collectedItems.length > 0) {
-      console.log(`[Game] Transferring ${run.collectedItems.length} items to inventory`);
-      for (const itemId of run.collectedItems) {
-        const item = getItemById(itemId);
-        if (item) {
-          addItem(this.state.inventory, item);
-          console.log(`[Game] Added ${item.name} to inventory`);
-        } else {
-          console.warn(`[Game] Unknown item ID: ${itemId}`);
-        }
-      }
-    }
-    
-    // Handle persisted ship logic
-    if (targetId !== null) {
-      if (run.targetRepairedThisRun) {
-        // Ship was repaired - add to persisted ships if not already there
-        if (!this.state.persistedShips.includes(targetId)) {
-          this.state.persistedShips.push(targetId);
-          console.log(`[Game] Ship ${targetId} repaired and will persist on board`);
-        }
-      } else {
-        // Ship was not repaired - remove from persisted ships
-        const index = this.state.persistedShips.indexOf(targetId);
-        if (index !== -1) {
-          this.state.persistedShips.splice(index, 1);
-          console.log(`[Game] Ship ${targetId} not repaired, removing from board`);
-        }
-      }
-    }
-    
-    // Clear hub selection after dive ends
-    this.clearHubSelectedShips();
-    
-    // Check for sector unlock on successful run completion
-    if (!run.collapsed) {
-      this.storyState.incrementMissionsCompleted();
-      const missionsCompleted = this.storyState.getMissionsCompleted();
-      
-      // Unlock sector every 3 completed missions
-      const nextSector = Math.floor(missionsCompleted / 3) + 2;
-      if (nextSector > this.state.meta.currentSector) {
-        this.checkSectorUnlock(nextSector);
-      }
-    }
-    
-    this.stateMachine.transition(GameFlowStates.RESULTS, this);
-  }
-
-  /**
-   * Return to idle state from results
-   * Note: Run state is cleared by RESULTS state exit handler.
-   */
-  returnToIdle(): void {
-    this.stateMachine.transition(GameFlowStates.IDLE, this);
-  }
-
-  /**
-   * Check and unlock new sectors based on progress
-   * Sectors unlock based on completed mission count milestones
-   * @param newSector The sector ID to potentially unlock
-   * @returns true if sector was unlocked
-   */
-  checkSectorUnlock(newSector: number): boolean {
-    // Only process valid sector IDs (2-7 are unlockable)
-    if (newSector < 2 || newSector > 7) return false;
-    
-    // Check if we already unlocked this sector
-    if (this.storyState.hasSectorUnlocked(newSector)) return false;
-    
-    // Check if this is the next sector in sequence
-    const currentSector = this.state.meta.currentSector;
-    if (newSector !== currentSector + 1) return false;
-    
-    // Mark as unlocked in story state
-    this.storyState.markSectorUnlocked(newSector);
-    
-    // Update current sector in meta state
-    this.state.meta.currentSector = newSector;
-    
-    // Broadcast to signal log
-    signalLogSystem.addBreakingNews(
-      `SECTOR UNLOCKED: Access granted to Sector ${newSector}. New salvage opportunities available.`
-    );
-    
-    console.log(`[Narrative] Sector unlocked: ${newSector}`);
-    
-    return true;
-  }
-
-  /**
-   * Check if currently in a specific game flow state
-   */
-  isInFlowState(state: GameFlowState): boolean {
-    return this.stateMachine.isIn(state);
-  }
-
-  /**
-   * Get current game flow state
-   */
-  getCurrentFlowState(): GameFlowState | null {
-    return this.stateMachine.getCurrent() as GameFlowState | null;
-  }
+  startDepthDive(): void { startDepthDive(this); }
+  endDepthDive(): void { endDepthDive(this); }
+  returnToIdle(): void { returnToIdle(this); }
+  checkSectorUnlock(newSector: number): boolean { return checkSectorUnlock(this, newSector); }
+  setHubSelectedShips(ids: number[]): void { setHubSelectedShips(this, ids); }
+  getHubSelectedShips(): number[] { return getHubSelectedShips(this); }
+  clearHubSelectedShips(): void { clearHubSelectedShips(this); }
 
   // ============================================================================
   // State Management
   // ============================================================================
 
-  /**
-   * Add energy (respects cap)
-   */
-  addEnergy(amount: number): void {
-    const baseCap = 1000;
-    const bonusPercent = this.getTotalBonus('energy_cap_percent');
-    const cap = baseCap * (1 + bonusPercent / 100);
-    this.state.energy = Math.min(cap, this.state.energy + amount);
-  }
-
-  /**
-   * Spend energy (returns true if successful)
-   */
-  spendEnergy(amount: number): boolean {
-    if (this.state.energy >= amount) {
-      this.state.energy -= amount;
-      return true;
-    }
-    return false;
-  }
-
-  /**
-   * Mark tutorial as seen (called by TutorialScene)
-   */
-  markTutorialSeen(): void {
-    this.state.tutorialSeen = true;
-    this.saveState();
-  }
-
-  /**
-   * Check if tutorial has been seen
-   */
-  isTutorialSeen(): boolean {
-    return this.state.tutorialSeen;
-  }
-
-  /**
-   * Set tutorial skip preference
-   */
-  setTutorialSkipped(value: boolean): void {
-    this.state.tutorialSkipped = value;
-    this.saveState();
-  }
-
-  /**
-   * Check if tutorial should be skipped
-   */
-  isTutorialSkipped(): boolean {
-    return this.state.tutorialSkipped ?? false;
-  }
-
-  /**
-   * Activate viral multiplier (from sharing)
-   */
-  activateViralMultiplier(): void {
-    this.state.viralMultiplier = VIRAL_MULTIPLIER_BOOST;
-    this.state.viralMultiplierExpiry = Date.now() + VIRAL_MULTIPLIER_DURATION;
-  }
-
-  /**
-   * Check and update viral multiplier expiry
-   */
-  updateViralMultiplier(): void {
-    if (this.state.viralMultiplierExpiry && Date.now() >= this.state.viralMultiplierExpiry) {
-      this.state.viralMultiplier = 1.0;
-      this.state.viralMultiplierExpiry = null;
-    }
-  }
-
-  /**
-   * Get current viral multiplier (checks expiry)
-   */
-  getViralMultiplier(): number {
-    this.updateViralMultiplier();
-    return this.state.viralMultiplier;
-  }
-
-  /**
-   * Get a ship by ID
-   */
-  getShip(id: number): Spacecraft | undefined {
-    return this.state.spacecraft.find(s => s.id === id);
-  }
-
-  /**
-   * Get all player-owned ships
-   */
-  getPlayerShips(): Spacecraft[] {
-    return this.state.spacecraft.filter(s => s.owner === 'player');
-  }
-
-  /**
-   * Get total bonus from inventory items
-   */
-  getTotalBonus(bonusType: string): number {
-    const allItems = [...this.state.inventory.hardware, ...this.state.inventory.crew];
-    return allItems.reduce((total, item) => {
-      const matchingBonus = item.bonuses.find(b => b.type === bonusType);
-      return total + (matchingBonus?.value ?? 0);
-    }, 0);
-  }
+  addEnergy(amount: number): void { addEnergy(this, amount); }
+  spendEnergy(amount: number): boolean { return spendEnergy(this, amount); }
+  activateViralMultiplier(): void { activateViralMultiplier(this); }
+  updateViralMultiplier(): void { updateViralMultiplier(this); }
+  getViralMultiplier(): number { return getViralMultiplier(this); }
+  getShip(id: number) { return getShip(this, id); }
+  getPlayerShips() { return getPlayerShips(this); }
+  getTotalBonus(bonusType: string): number { return getTotalBonus(this, bonusType); }
+  markTutorialSeen(): void { markTutorialSeen(this); }
+  isTutorialSeen(): boolean { return isTutorialSeen(this); }
+  setTutorialSkipped(value: boolean): void { setTutorialSkipped(this, value); }
+  isTutorialSkipped(): boolean { return isTutorialSkipped(this); }
 
   // ============================================================================
-  // Hub Selection Management
+  // Party Selection
   // ============================================================================
 
-  /**
-   * Set selected hub ships for the next dive
-   */
-  setHubSelectedShips(ids: number[]): void {
-    this.state.hubSelectedShips = [...ids];
-  }
-
-  /**
-   * Get currently selected hub ships
-   */
-  getHubSelectedShips(): number[] {
-    return [...this.state.hubSelectedShips];
-  }
-
-  /**
-   * Clear hub selection (called after dive ends)
-   */
-  clearHubSelectedShips(): void {
-    this.state.hubSelectedShips = [];
-  }
+  getAwakenedAuthoredRecruits() { return getAwakenedAuthoredRecruits(this); }
+  setSelectedLead(authoredId: string | null): void { setSelectedLead(this, authoredId); }
+  setCompanion(slotIndex: 0 | 1, authoredId: string | null): void { setCompanion(this, slotIndex, authoredId); }
+  getSelectedLead(): string | null { return getSelectedLead(this); }
+  getCompanionSlots(): [string | null, string | null] { return getCompanionSlots(this); }
 
   // ============================================================================
-  // Hub System Access (for IdleScene)
+  // Debt System
   // ============================================================================
 
-  /**
-   * Get the hub system (used by IdleScene)
-   * Note: This is a temporary accessor - the HubSystem instance
-   * is created and managed by IdleScene.
-   */
-  getHubSystem(): import('../systems/hub-system').HubSystem | undefined {
-    // Return undefined - IdleScene creates its own HubSystem instance
-    // This accessor is for future use if needed
-    return undefined;
+  calculateDebtCeiling(): number { return calculateDebtCeiling(this); }
+  applyDebtPayment(amount: number): void { applyDebtPayment(this, amount); }
+  addDebt(amount: number, reason: string): void { addDebt(this, amount, reason); }
+  checkDebtThresholds(): void { checkDebtThresholds(this); }
+  isDebtLocked(): boolean { return isDebtLocked(this); }
+  getDebtRatio(): number { return getDebtRatio(this); }
+  advanceBillingCycle(): void { advanceBillingCycle(this); }
+  formatCurrency(amount: number): string { return formatCurrency(amount); }
+
+  // ============================================================================
+  // Doctrine System
+  // ============================================================================
+
+  addDoctrinePoints(doctrine: DoctrineType, points: number): void { 
+    addDoctrinePoints(this, doctrine, points); 
   }
+  checkDoctrineLock(): void { checkDoctrineLock(this); }
+  getDoctrineProgress() { return getDoctrineProgress(this); }
+  hasDoctrine(doctrine: DoctrineType): boolean { return hasDoctrine(this, doctrine); }
+  isDoctrineLocked(): boolean { return isDoctrineLocked(this); }
+
+  // ============================================================================
+  // Flow State Queries
+  // ============================================================================
+
+  isInFlowState(state: GameFlowState): boolean {
+    return isInFlowState(this.stateMachine as StateMachine<GameAccess>, state);
+  }
+
+  getCurrentFlowState(): GameFlowState | null {
+    return getCurrentFlowState(this.stateMachine as StateMachine<GameAccess>);
+  }
+
   // ============================================================================
   // Persistence
   // ============================================================================
 
+  saveState(): void { saveGameState(this, this.saveManager); }
+
+  // ============================================================================
+  // Game Control
+  // ============================================================================
+
   /**
-   * Save game state to localStorage
+   * Reset game to initial state (restart)
    */
-  saveState(): void {
-    this.saveManager.save({
-      energy: this.state.energy,
-      spacecraft: this.state.spacecraft,
-      inventory: this.state.inventory,
-      viralMultiplier: this.state.viralMultiplier,
-      viralMultiplierExpiry: this.state.viralMultiplierExpiry,
-      totalPlayEarned: this.state.totalPlayEarned,
-      totalExtractions: this.state.totalExtractions,
-      totalCollapses: this.state.totalCollapses,
-      tutorialSeen: this.state.tutorialSeen,
-      tutorialSkipped: this.state.tutorialSkipped ?? false,
-      hubSelectedShips: this.state.hubSelectedShips,
-      persistedShips: this.state.persistedShips,
-      resources: this.state.resources,
-      cryoState: this.state.cryoState,
-      availableCryoPods: this.state.availableCryoPods,
-      activeMissions: this.state.activeMissions,
-      availableMissions: this.state.availableMissions,
-      completedMissionCount: this.state.completedMissionCount,
-      deathCurrency: this.state.deathCurrency,
-      deckUnlockProgress: this.state.deckUnlockProgress,
-      nextUnlockCardId: this.state.nextUnlockCardId,
-      unlockedCards: this.state.unlockedCards,
-      crewRoster: this.state.crewRoster,
-      crewAssignments: this.state.crewAssignments,
-      meta: this.state.meta,
-      storyState: this.storyState.toJSON()
-    });
+  resetGame(): void {
+    // Create fresh state
+    const freshState = createInitialState();
+    
+    // Replace all state properties
+    Object.assign(this.state, freshState);
+    
+    // Reset story state
+    this.storyState.clear();
+    
+    console.log('[Game] Game reset to initial state');
   }
 
   /**
-   * Load game state from localStorage
+   * Toggle fullscreen mode
    */
-  loadState(): void {
-    const saveData = this.saveManager.load();
-
-    if (saveData) {
-      // Primitive values - use null coalescing for safety
-      this.state.energy = saveData.energy ?? this.state.energy;
-      this.state.viralMultiplier = saveData.viralMultiplier ?? 1.0;
-      this.state.viralMultiplierExpiry = saveData.viralMultiplierExpiry ?? null;
-      this.state.totalPlayEarned = saveData.totalPlayEarned ?? 0;
-      this.state.totalExtractions = saveData.totalExtractions ?? 0;
-      this.state.totalCollapses = saveData.totalCollapses ?? 0;
-      this.state.tutorialSeen = saveData.tutorialSeen ?? false;
-      this.state.tutorialSkipped = saveData.tutorialSkipped ?? false;
-      this.state.hubSelectedShips = saveData.hubSelectedShips ?? [];
-      this.state.persistedShips = saveData.persistedShips ?? [];
-      
-      // Array/object values - validate before assigning to prevent undefined overwrites
-      if (saveData.spacecraft && Array.isArray(saveData.spacecraft)) {
-        this.state.spacecraft = saveData.spacecraft;
-      }
-      
-      if (saveData.inventory && 
-          typeof saveData.inventory === 'object' &&
-          'hardware' in saveData.inventory && 
-          'crew' in saveData.inventory) {
-        this.state.inventory = saveData.inventory;
-      }
-      
-      // Resources
-      if (saveData.resources && typeof saveData.resources === 'object') {
-        this.state.resources = saveData.resources;
-      }
-      
-      // Cryo state
-      if (saveData.cryoState && typeof saveData.cryoState === 'object') {
-        this.state.cryoState = saveData.cryoState;
-      }
-      
-      // Available cryo pods
-      if (typeof saveData.availableCryoPods === 'number') {
-        this.state.availableCryoPods = saveData.availableCryoPods;
-      }
-      
-      // Active missions
-      if (saveData.activeMissions && Array.isArray(saveData.activeMissions)) {
-        this.state.activeMissions = saveData.activeMissions;
-      }
-      
-      // Available missions
-      if (saveData.availableMissions && Array.isArray(saveData.availableMissions)) {
-        this.state.availableMissions = saveData.availableMissions;
-      }
-      
-      // Completed mission count
-      if (typeof saveData.completedMissionCount === 'number') {
-        this.state.completedMissionCount = saveData.completedMissionCount;
-      }
-      
-      // Meta progression
-      this.state.deathCurrency = saveData.deathCurrency ?? 1;
-      this.state.deckUnlockProgress = saveData.deckUnlockProgress ?? 1;
-      this.state.nextUnlockCardId = saveData.nextUnlockCardId ?? null;
-      this.state.unlockedCards = saveData.unlockedCards ?? [];
-      
-      // Crew progression
-      this.state.crewRoster = saveData.crewRoster ?? [];
-      this.state.crewAssignments = saveData.crewAssignments ?? {};
-      
-      // Meta state (debt, sector, billing)
-      if (saveData.meta && typeof saveData.meta === 'object') {
-        this.state.meta = saveData.meta;
-      }
-      
-      // Story state (narrative flags and variables)
-      if (saveData.storyState && typeof saveData.storyState === 'object') {
-        this.storyState.fromJSON(saveData.storyState);
-      }
-      
-      // Check viral multiplier expiry on load
-      this.updateViralMultiplier();
+  toggleFullscreen(): void {
+    if (this.fullscreenToggleCallback) {
+      this.fullscreenToggleCallback();
     }
   }
 
   // ============================================================================
-  // Scene Manager Access
+  // Scene Management
   // ============================================================================
 
-  /**
-   * Get the scene manager
-   */
-  getSceneManager(): SceneManager {
-    return this.scenes;
-  }
-
-  /**
-   * Switch to a scene by ID
-   */
   switchScene(sceneId: string): void {
     this.scenes.switchTo(sceneId);
+  }
+
+  getHubSystem(): import('../systems/hub-system').HubSystem | undefined {
+    return undefined;
   }
 }

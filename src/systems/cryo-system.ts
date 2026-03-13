@@ -5,10 +5,11 @@
  * Players can wake crew using power cells.
  */
 
-import { CrewMember, generateCrewMember } from '../types/crew';
+import { CrewMember, generateCrewMember, AUTHORED_RECRUITS, AUTHORED_RECRUIT_DEBT_COST } from '../types/crew';
 import { calculateWakeCost } from '../config/economy-config';
 import { signalLogSystem } from './signal-log-system';
 import type { StoryState } from '../dialogue/story-state';
+import type { Game } from '../game/game';
 
 /**
  * Represents a cryo pod
@@ -37,20 +38,44 @@ export interface CryoState {
 }
 
 /**
- * Create initial cryo state with 3 frozen pods
+ * Create initial cryo state with authored and generic crew
  */
 export function createCryoState(): CryoState {
   const pods: CryoPod[] = [];
+  const usedAuthoredIds = new Set<string>();
   
-  // Start with 3 frozen crew members
-  for (let i = 0; i <= 3; i++) {
-    pods.push(createRandomPod(i));
+  // Add 2 authored recruits (randomly selected)
+  const shuffledAuthored = [...AUTHORED_RECRUITS].sort(() => Math.random() - 0.5);
+  for (let i = 0; i < 2 && i < shuffledAuthored.length; i++) {
+    const authored = shuffledAuthored[i];
+    usedAuthoredIds.add(authored.authoredId);
+    pods.push(createAuthoredPod(pods.length, authored));
+  }
+  
+  // Add 2 generic crew members
+  for (let i = 0; i < 2; i++) {
+    pods.push(createRandomPod(pods.length));
   }
   
   return {
     pods,
     awakenedCount: 1, // Player starts awake
     maxPods: 5  // Can add 2 more pods
+  };
+}
+
+/**
+ * Create a cryo pod for an authored recruit
+ */
+function createAuthoredPod(index: number, authored: typeof AUTHORED_RECRUITS[0]): CryoPod {
+  const crew = generateCrewMember(authored);
+  
+  // Authored recruits cost more power cells and have tier 3 stats
+  return {
+    id: `cryopod_authored_${index}_${Date.now()}`,
+    crew,
+    wakeCost: 12, // Higher power cell cost for authored
+    tier: 3
   };
 }
 
@@ -90,23 +115,57 @@ function getRandomTier(): 1 | 2 | 3 {
  * @param availablePowerCells - Current power cell count
  * @param awakeCount - Number of currently awake crew (for cost calculation)
  * @param storyState - Story state for tracking recruit introductions (optional)
- * @returns Success status, message, and cost
+ * @param game - Game instance for debt management (required)
+ * @returns Success status, message, cost (power cells), and debt cost
  */
 export function wakeCrewMember(
   pod: CryoPod, 
   availablePowerCells: number,
   awakeCount: number = 0,
-  storyState?: StoryState
-): { success: boolean; message: string; cost: number } {
+  storyState?: StoryState,
+  game?: Game
+): { success: boolean; message: string; cost: number; debtCost: number } {
   if (pod.crew.awake) {
-    return { success: false, message: 'Crew member already awake', cost: 0 };
+    return { success: false, message: 'Crew member already awake', cost: 0, debtCost: 0 };
+  }
+  
+  // Check if debt locked (at 100% ceiling) - blocks ALL crew wakes
+  if (game && game.isDebtLocked()) {
+    return { 
+      success: false, 
+      message: 'DEBT CEILING REACHED - Cannot wake crew', 
+      cost: 0, 
+      debtCost: 0 
+    };
   }
   
   // Calculate wake cost based on current awake crew count
   const wakeCost = calculateWakeCost(awakeCount);
   
   if (availablePowerCells < wakeCost) {
-    return { success: false, message: 'Not enough power cells', cost: wakeCost };
+    return { success: false, message: 'Not enough power cells', cost: wakeCost, debtCost: 0 };
+  }
+  
+  // Check debt ceiling for authored recruits (adds debt, must not exceed ceiling)
+  if (pod.crew.isAuthored) {
+    if (!game) {
+      return { success: false, message: 'Cannot recruit - system error', cost: 0, debtCost: 0 };
+    }
+    
+    const newDebt = game.state.meta.debt + AUTHORED_RECRUIT_DEBT_COST;
+    const debtCeiling = game.state.meta.debtCeiling;
+    
+    if (newDebt > debtCeiling) {
+      return { 
+        success: false, 
+        message: `Cannot recruit - would exceed debt ceiling (need ${AUTHORED_RECRUIT_DEBT_COST.toLocaleString()} space)`, 
+        cost: 0,
+        debtCost: 0
+      };
+    }
+    
+    // Add debt for authored recruit
+    game.addDebt(AUTHORED_RECRUIT_DEBT_COST, `Recruited ${pod.crew.name}`);
   }
   
   // Wake the crew member
@@ -122,13 +181,18 @@ export function wakeCrewMember(
       
       // Broadcast to signal log
       const recruitName = pod.crew.name;
-      signalLogSystem.addBreakingNews(`CONTRACT SIGNED: ${recruitName} joins station roster. Debt: +150`);
+      signalLogSystem.addBreakingNews(`CONTRACT SIGNED: ${recruitName} joins station roster`);
       
       console.log(`[Narrative] Recruit arrived: ${recruitName} (${pod.crew.authoredId})`);
     }
   }
   
-  return { success: true, message: `${pod.crew.name} awakened from cryo!`, cost: wakeCost };
+  return { 
+    success: true, 
+    message: `${pod.crew.name} awakened from cryo!`, 
+    cost: wakeCost,
+    debtCost: pod.crew.isAuthored ? AUTHORED_RECRUIT_DEBT_COST : 0
+  };
 }
 
 /**

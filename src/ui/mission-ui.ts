@@ -40,6 +40,24 @@ const TYPE_COLORS = {
 };
 
 /**
+ * Doctrine badge colors
+ */
+const DOCTRINE_COLORS = {
+  corporate: '#4a90e2',
+  cooperative: '#00ff88',
+  smuggler: '#ff00ff'
+};
+
+/**
+ * Doctrine badge labels
+ */
+const DOCTRINE_LABELS = {
+  corporate: '+Corporate',
+  cooperative: '+Co-op',
+  smuggler: '+Smuggler'
+};
+
+/**
  * Get panel position (centered on screen)
  */
 function getPanelPosition(display: IDisplay): { x: number; y: number } {
@@ -201,6 +219,30 @@ function renderAvailableMissionCard(
     align: 'center',
     baseline: 'middle'
   });
+  
+  // Doctrine badge (if mission has doctrine affinity)
+  if (mission.doctrineAffinity && mission.doctrinePoints) {
+    const badgeWidth = 70;
+    const badgeX = x + 15;
+    const badgeY = y + 10;
+    
+    display.drawRoundRect(badgeX, badgeY, badgeWidth, 24, 4, {
+      fill: DOCTRINE_COLORS[mission.doctrineAffinity],
+      alpha: 0.3
+    });
+    
+    display.drawText(
+      DOCTRINE_LABELS[mission.doctrineAffinity],
+      badgeX + badgeWidth / 2,
+      badgeY + 12,
+      {
+        font: FONTS.tinyFont,
+        fill: DOCTRINE_COLORS[mission.doctrineAffinity],
+        align: 'center',
+        baseline: 'middle'
+      }
+    );
+  }
   
   // Description
   display.drawText(mission.description, x + 15, y + 45, {

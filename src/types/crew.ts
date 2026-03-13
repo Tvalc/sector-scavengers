@@ -224,8 +224,37 @@ const LAST_NAMES = [
 
 /**
  * Generate a random crew member
+ * @param authoredRecruit - Optional authored recruit to use instead of random generation
  */
-export function generateCrewMember(): CrewMember {
+export function generateCrewMember(authoredRecruit?: AuthoredRecruit): CrewMember {
+  // If authored recruit provided, use their data
+  if (authoredRecruit) {
+    const baseStats = generateBaseStats();
+    const roleBonus = ROLE_BONUSES[authoredRecruit.role];
+    
+    // Apply role bonuses (authored characters get slightly better stats)
+    const stats: CrewStats = {
+      efficiency: Math.min(100, baseStats.efficiency + (roleBonus.efficiency || 0) + 10),
+      luck: Math.min(100, baseStats.luck + (roleBonus.luck || 0) + 10),
+      technical: Math.min(100, baseStats.technical + (roleBonus.technical || 0) + 10),
+      speed: Math.min(100, baseStats.speed + (roleBonus.speed || 0) + 10)
+    };
+    
+    return {
+      id: `crew_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      name: authoredRecruit.name,
+      role: authoredRecruit.role,
+      stats,
+      awake: false,
+      experience: 0,
+      level: 1,
+      alive: true,
+      isAuthored: true,
+      authoredId: authoredRecruit.authoredId
+    };
+  }
+  
+  // Generic crew generation
   const role = getRandomRole();
   const baseStats = generateBaseStats();
   const roleBonus = ROLE_BONUSES[role];
@@ -295,6 +324,209 @@ export function getRoleDescription(role: CrewRole): string {
   };
   return descriptions[role];
 }
+
+/**
+ * Ability effect types
+ */
+export type PassiveEffectType = 'shield' | 'repair' | 'discovery' | 'extraction' | 'crew_efficiency';
+export type ActiveEffectType = 'reroll_hand' | 'triage' | 'breach_stabilize' | 'guaranteed_cache' | 'dead_drop' | 'ghost_credential';
+
+/**
+ * Passive ability effect
+ */
+export interface PassiveEffect {
+  type: PassiveEffectType;
+  value: number;
+}
+
+/**
+ * Active ability effect (one-time use per run)
+ */
+export interface ActiveEffect {
+  type: ActiveEffectType;
+  trigger: string;
+  usage: 'once_per_run' | 'passive';
+}
+
+/**
+ * Lead ability configuration
+ */
+export interface LeadAbility {
+  passive?: PassiveEffect;
+  active?: ActiveEffect;
+}
+
+/**
+ * Companion ability configuration (50% power or null if not applicable)
+ */
+export type CompanionAbility = {
+  passive?: PassiveEffect;
+  active?: ActiveEffect;
+} | null;
+
+/**
+ * Structured ability definition
+ */
+export interface AbilityDefinition {
+  name: string;
+  description: string;
+  leadEffect: LeadAbility;
+  companionEffect: CompanionAbility;
+}
+
+/**
+ * Authored recruit data - named story characters with unique abilities
+ */
+export interface AuthoredRecruit {
+  authoredId: string;
+  name: string;
+  role: CrewRole;
+  bio: string;
+  signatureAbility: string;
+  /** Lead ability description (full power when lead) */
+  leadAbility: string;
+  /** Companion ability description (50% power when companion) */
+  companionAbility: string;
+  /** Structured ability definition for mechanical effects */
+  ability: AbilityDefinition;
+}
+
+/**
+ * All authored recruits in the game
+ * Each costs $1M debt to recruit
+ */
+export const AUTHORED_RECRUITS: AuthoredRecruit[] = [
+  {
+    authoredId: 'max_chen',
+    name: 'Max Chen',
+    role: CrewRole.Engineer,
+    bio: 'Former Nexus Corp systems architect who saw too much and walked away.',
+    signatureAbility: 'Working Memory',
+    leadAbility: '+1 SHIELD per run, Reroll node layout once per dive',
+    companionAbility: '+0.5 SHIELD per run',
+    ability: {
+      name: 'Working Memory',
+      description: '+1 SHIELD per run, one-time hand reroll',
+      leadEffect: {
+        passive: { type: 'shield', value: 1 },
+        active: { type: 'reroll_hand', trigger: 'after_first_hand', usage: 'once_per_run' }
+      },
+      companionEffect: {
+        passive: { type: 'shield', value: 0.5 }
+      }
+    }
+  },
+  {
+    authoredId: 'imani_okoro',
+    name: 'Imani Okoro',
+    role: CrewRole.Medic,
+    bio: 'Deep-void medic who has saved more lives in the dark than most stations ever see.',
+    signatureAbility: 'Triage Protocol',
+    leadAbility: 'Prevent first crew loss per dive, +20% crew efficiency',
+    companionAbility: 'Prevent first crew loss per dive (50% chance)',
+    ability: {
+      name: 'Triage Protocol',
+      description: 'Prevent first crew loss with TRIAGE PROTECTED message',
+      leadEffect: {
+        active: { type: 'triage', trigger: 'on_crew_loss', usage: 'once_per_run' }
+      },
+      companionEffect: {
+        active: { type: 'triage', trigger: 'on_crew_loss_50_percent', usage: 'once_per_run' }
+      }
+    }
+  },
+  {
+    authoredId: 'jax_vasquez',
+    name: 'Jax Vasquez',
+    role: CrewRole.Engineer,
+    bio: 'Hull technician who learned to keep ships together with nothing but scrap and stubbornness.',
+    signatureAbility: 'Field Retrofit',
+    leadAbility: '+25% repair speed, First hull breach auto-stabilizes',
+    companionAbility: '+12% repair speed',
+    ability: {
+      name: 'Field Retrofit',
+      description: '+25% hull repair, first breach auto-stabilizes at 50% hull',
+      leadEffect: {
+        passive: { type: 'repair', value: 25 },
+        active: { type: 'breach_stabilize', trigger: 'on_hull_breach', usage: 'once_per_run' }
+      },
+      companionEffect: {
+        passive: { type: 'repair', value: 12 }
+      }
+    }
+  },
+  {
+    authoredId: 'sera_kim',
+    name: 'Sera Kim',
+    role: CrewRole.Scientist,
+    bio: 'Xenoarchaeologist chasing signals from the pre-Collapse era.',
+    signatureAbility: 'Signal Trace',
+    leadAbility: '+20% discovery chance, First discovery reveals hidden cache',
+    companionAbility: '+10% discovery chance',
+    ability: {
+      name: 'Signal Trace',
+      description: '+20% discovery chance, first discovery guaranteed good result',
+      leadEffect: {
+        passive: { type: 'discovery', value: 20 },
+        active: { type: 'guaranteed_cache', trigger: 'on_first_discovery', usage: 'once_per_run' }
+      },
+      companionEffect: {
+        passive: { type: 'discovery', value: 10 }
+      }
+    }
+  },
+  {
+    authoredId: 'rook_stone',
+    name: 'Rook Stone',
+    role: CrewRole.Scavenger,
+    bio: 'Legendary deep-void salvager who has never lost a haul to a hull breach.',
+    signatureAbility: 'Dead Drop',
+    leadAbility: '+30% extraction yield, Bank 50% of rewards before risky extraction',
+    companionAbility: '+15% extraction yield',
+    ability: {
+      name: 'Dead Drop',
+      description: '+30% extraction value, bank 50% of run value before extraction',
+      leadEffect: {
+        passive: { type: 'extraction', value: 30 },
+        active: { type: 'dead_drop', trigger: 'before_extraction', usage: 'once_per_run' }
+      },
+      companionEffect: {
+        passive: { type: 'extraction', value: 15 }
+      }
+    }
+  },
+  {
+    authoredId: 'del_reyes',
+    name: 'Del Reyes',
+    role: CrewRole.Scavenger,
+    bio: 'Claims specialist with a talent for finding ships that officially do not exist.',
+    signatureAbility: 'Ghost Credential',
+    leadAbility: 'First SCAN or EXTRACT on claimed ships authorized automatically',
+    companionAbility: 'First SCAN on claimed ships authorized (50% chance)',
+    ability: {
+      name: 'Ghost Credential',
+      description: 'First SCAN/EXTRACT on claimed ships treated as authorized',
+      leadEffect: {
+        active: { type: 'ghost_credential', trigger: 'on_claim_action', usage: 'once_per_run' }
+      },
+      companionEffect: {
+        active: { type: 'ghost_credential', trigger: 'on_claim_action_50_percent', usage: 'once_per_run' }
+      }
+    }
+  }
+];
+
+/**
+ * Get an authored recruit by ID
+ */
+export function getAuthoredRecruit(authoredId: string): AuthoredRecruit | undefined {
+  return AUTHORED_RECRUITS.find(r => r.authoredId === authoredId);
+}
+
+/**
+ * Debt cost to recruit an authored character
+ */
+export const AUTHORED_RECRUIT_DEBT_COST = 1000000;
 
 /**
  * Get crew bonus description for UI

@@ -5,6 +5,12 @@
  */
 
 import { Resources } from './resources';
+import { DoctrineType } from './state';
+
+/**
+ * Mission source - determines mission characteristics
+ */
+export type MissionSource = 'standard' | 'company' | 'co_op' | 'black_market';
 
 /**
  * Mission types available
@@ -37,6 +43,10 @@ export interface MissionTypeConfig {
   description: string;
   /** Number of crew required */
   crewRequired: number;
+  /** Doctrine alignment for this mission type */
+  doctrineAffinity?: DoctrineType;
+  /** Doctrine points awarded on completion */
+  doctrinePoints?: number;
 }
 
 /**
@@ -55,7 +65,9 @@ export const MISSION_CONFIG: Record<MissionType, MissionTypeConfig> = {
     riskLevel: 'low',
     name: 'Salvage Run',
     description: 'Search for valuable materials',
-    crewRequired: 1
+    crewRequired: 1,
+    doctrineAffinity: undefined,  // Standard mission - no doctrine bias
+    doctrinePoints: 1  // +1 to lead's doctrine
   },
   [MissionType.Patrol]: {
     duration: 5 * 60 * 1000,  // 5 minutes
@@ -63,7 +75,9 @@ export const MISSION_CONFIG: Record<MissionType, MissionTypeConfig> = {
     riskLevel: 'medium',
     name: 'Sector Patrol',
     description: 'Patrol local sector for threats and opportunities',
-    crewRequired: 2
+    crewRequired: 2,
+    doctrineAffinity: 'corporate',  // Company contracts
+    doctrinePoints: 2  // +2 corporate
   },
   [MissionType.Trade]: {
     duration: 10 * 60 * 1000,  // 10 minutes
@@ -71,7 +85,9 @@ export const MISSION_CONFIG: Record<MissionType, MissionTypeConfig> = {
     riskLevel: 'medium',
     name: 'Trade Convoy',
     description: 'Trade resources at nearby station',
-    crewRequired: 2
+    crewRequired: 2,
+    doctrineAffinity: 'cooperative',  // Co-op trade agreements
+    doctrinePoints: 2  // +2 cooperative
   },
   [MissionType.Exploration]: {
     duration: 15 * 60 * 1000,  // 15 minutes
@@ -79,7 +95,9 @@ export const MISSION_CONFIG: Record<MissionType, MissionTypeConfig> = {
     riskLevel: 'high',
     name: 'Deep Space Survey',
     description: 'Explore uncharted regions for rare finds',
-    crewRequired: 3
+    crewRequired: 3,
+    doctrineAffinity: 'smuggler',  // Black market opportunities
+    doctrinePoints: 2  // +2 smuggler
   }
 };
 
@@ -111,16 +129,46 @@ export interface Mission {
   startTime: number | null;
   /** Whether mission is complete */
   complete: boolean;
+  /** Doctrine affinity for this mission */
+  doctrineAffinity?: DoctrineType;
+  /** Doctrine points awarded on completion */
+  doctrinePoints?: number;
+  /** Mission source - determines characteristics */
+  source?: MissionSource;
+  /** Reward modifier based on source */
+  rewardModifier?: number;
+  /** Risk modifier based on source */
+  riskModifier?: number;
 }
 
 /**
  * Generate a mission of the specified type (or random if not specified)
  * Uses fixed durations from MISSION_CONFIG
  */
-export function generateMission(type?: MissionType): Mission {
+export function generateMission(type?: MissionType, source?: MissionSource): Mission {
   const missionTypes = Object.values(MissionType);
   const selectedType = type || missionTypes[Math.floor(Math.random() * missionTypes.length)];
   const config = MISSION_CONFIG[selectedType];
+  
+  // Apply source modifiers
+  let rewardModifier = 1.0;
+  let riskModifier = 1.0;
+  
+  if (source === 'company') {
+    rewardModifier = 1.5;  // +50% rewards
+    riskModifier = 0.8;    // -20% risk
+  } else if (source === 'black_market') {
+    rewardModifier = 2.0;  // +100% rewards
+    riskModifier = 1.3;    // +30% risk
+  }
+  
+  // Apply reward modifier to base rewards
+  const modifiedRewards: Resources = {
+    metal: Math.floor(config.baseRewards.metal * rewardModifier),
+    tech: Math.floor(config.baseRewards.tech * rewardModifier),
+    components: Math.floor(config.baseRewards.components * rewardModifier),
+    powerCells: Math.floor(config.baseRewards.powerCells * rewardModifier)
+  };
   
   return {
     id: `mission_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -129,12 +177,17 @@ export function generateMission(type?: MissionType): Mission {
     description: config.description,
     duration: config.duration,
     crewRequired: config.crewRequired,
-    rewards: { ...config.baseRewards },
+    rewards: modifiedRewards,
     riskLevel: config.riskLevel,
     assignedCrew: [],
     progress: 0,
     startTime: null,
-    complete: false
+    complete: false,
+    doctrineAffinity: config.doctrineAffinity,
+    doctrinePoints: config.doctrinePoints,
+    source: source || 'standard',
+    rewardModifier,
+    riskModifier
   };
 }
 

@@ -6,6 +6,38 @@ import { Mission } from './mission';
 import { CrewMember } from './crew';
 
 /**
+ * Ability usage tracking flags (one-time abilities per run)
+ */
+export interface AbilityUsageFlags {
+  /** Max reroll used */
+  workingMemoryUsed: boolean;
+  /** Imani protection used */
+  triageUsed: boolean;
+  /** Jax breach stabilization used */
+  fieldRetrofitUsed: boolean;
+  /** Sera guaranteed cache used */
+  signalTraceUsed: boolean;
+  /** Rook banking used */
+  deadDropUsed: boolean;
+  /** Del authorization used */
+  ghostCredentialUsed: boolean;
+}
+
+/**
+ * Applied passive bonuses from abilities
+ */
+export interface AppliedPassiveBonuses {
+  /** Total shield bonus */
+  shieldBonus: number;
+  /** Total repair bonus (percentage) */
+  repairBonus: number;
+  /** Total discovery bonus (percentage) */
+  discoveryBonus: number;
+  /** Total extraction bonus (percentage) */
+  extractionBonus: number;
+}
+
+/**
  * Current run state during a Salvage Operation session
  * 
  * Design: One ship per run - the player selects a single derelict from the hub,
@@ -28,6 +60,20 @@ export interface RunState {
   targetRepairedThisRun: boolean;
   /** Meta progression: Scrap earned from this run (even on death) */
   scrapEarned: number;
+  /** Lead character ID for this run (authoredId or null for generic captain) */
+  leadId: string | null;
+  /** Companion character IDs for this run (authoredIds or null for empty) */
+  companionIds: [string | null, string | null];
+  /** Ability usage tracking (one-time abilities per run) */
+  abilityUsage: AbilityUsageFlags;
+  /** Applied passive bonuses from lead and companions */
+  appliedPassiveBonuses: AppliedPassiveBonuses;
+  /** Rewards banked via Dead Drop ability (Rook) */
+  bankedRewards: number;
+  /** Whether first hand has been dealt (for Working Memory trigger) */
+  firstHandDealt: boolean;
+  /** Number of REPAIR cards played this run (reduces collapse risk) */
+  repairsThisRun: number;
 }
 
 /**
@@ -42,8 +88,46 @@ export function createRunState(): RunState {
     collectedItems: [],
     targetShipId: null,
     targetRepairedThisRun: false,
-    scrapEarned: 0
+    scrapEarned: 0,
+    leadId: null,
+    companionIds: [null, null],
+    abilityUsage: {
+      workingMemoryUsed: false,
+      triageUsed: false,
+      fieldRetrofitUsed: false,
+      signalTraceUsed: false,
+      deadDropUsed: false,
+      ghostCredentialUsed: false
+    },
+    appliedPassiveBonuses: {
+      shieldBonus: 0,
+      repairBonus: 0,
+      discoveryBonus: 0,
+      extractionBonus: 0
+    },
+    bankedRewards: 0,
+    firstHandDealt: false,
+    repairsThisRun: 0
   };
+}
+
+/**
+ * Doctrine types - player operational philosophy
+ */
+export type DoctrineType = 'corporate' | 'cooperative' | 'smuggler';
+
+/**
+ * Ending types - determines which ending the player receives
+ */
+export type EndingType = 'corporate' | 'cooperative' | 'smuggler' | 'debt' | 'collapse';
+
+/**
+ * Doctrine point tracking
+ */
+export interface DoctrinePoints {
+  corporate: number;
+  cooperative: number;
+  smuggler: number;
 }
 
 /**
@@ -52,14 +136,20 @@ export function createRunState(): RunState {
 export interface MetaState {
   /** Current debt owed */
   debt: number;
-  /** Maximum debt before game over */
+  /** Maximum debt before game over (dynamically calculated: $1M base + $750K/station + $2M/sector) */
   debtCeiling: number;
   /** Current sector (1-7) */
   currentSector: number;
-  /** Payment due timestamp (null if no payment pending) */
+  /** Payment due amount (null if no payment pending, set every 3 runs) */
   paymentDue: number | null;
-  /** Billing cycle timer in milliseconds */
+  /** Billing cycle counter (0-3, triggers payment when reaches 3) */
   billingTimer: number;
+  /** Runs completed count (for debt cycle tracking) */
+  runsCompleted: number;
+  /** Locked-in doctrine (null until 10 points with clear majority) */
+  doctrine: DoctrineType | null;
+  /** Doctrine point accumulation */
+  doctrinePoints: DoctrinePoints;
 }
 
 /**
@@ -68,10 +158,13 @@ export interface MetaState {
 export function createMetaState(): MetaState {
   return {
     debt: 100000, // Start with $100k debt
-    debtCeiling: 1000000, // $1M ceiling
+    debtCeiling: 1000000, // $1M ceiling (will be recalculated based on stations/sectors)
     currentSector: 1,
     paymentDue: null,
     billingTimer: 0,
+    runsCompleted: 0, // Track runs toward billing cycle (3 runs = 1 billing cycle)
+    doctrine: null,
+    doctrinePoints: { corporate: 0, cooperative: 0, smuggler: 0 }
   };
 }
 
@@ -132,10 +225,21 @@ export interface GameState {
    * Tracks repairs and run completions toward claim threshold
    */
   shipClaimProgress: Record<number, number>;
-  /** Woken crew members available for assignment */
+  /** 
+   * Woken crew members available for assignment
+   * 
+   * NOTE: This is a DERIVED/DENORMALIZED view for convenience.
+   * The authoritative source of truth for crew is: cryoState.pods[*].crew
+   * When crew are woken, they should be added to both cryoState.pods AND crewRoster.
+   * When loading saves, crewRoster should be rebuilt from cryoState.pods.
+   */
   crewRoster: CrewMember[];
   /** Crew assignments: ship/station ID → crew ID */
   crewAssignments: Record<number, string>;
+  /** Selected lead character for next run (authoredId or null for generic captain) */
+  selectedLead: string | null;
+  /** Selected companions for next run (authoredIds or null for empty) */
+  companionSlots: [string | null, string | null];
 }
 
 /**
@@ -190,7 +294,9 @@ export function createInitialState(): GameState {
     deckUnlockProgress: 0,
     nextUnlockCardId: null,
     unlockedCards: [],
-    meta: createMetaState()
+    meta: createMetaState(),
+    selectedLead: null,
+    companionSlots: [null, null]
   };
  }
 
@@ -218,6 +324,11 @@ export const MAX_ROUNDS = 10;
  * Hull breach probability (35%)
  */
 export const COLLAPSE_PROBABILITY = 0.35;
+
+/**
+ * Risk reduction per REPAIR card played (10%)
+ */
+export const RISK_REDUCTION_PER_REPAIR = 0.10;
 
 /**
  * Extract base payout

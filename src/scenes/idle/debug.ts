@@ -17,6 +17,7 @@ export class NodeDebugger {
   private debugPositions: Array<{ x: number; y: number }> = [];
   private selectedNodeIndex: number = 0;
   private game: any; // Reference to Game for cheats
+  private showHitboxes: boolean = false;
 
   constructor(game?: any) {
     this.game = game;
@@ -32,7 +33,9 @@ export class NodeDebugger {
     this.enabled = !this.enabled;
     if (this.enabled) {
       this.debugPositions = [...SHIP_POSITIONS];
+      this.showHitboxes = false;
       console.log('[DEBUG] Ship position debugger enabled');
+      console.log('[DEBUG] Press B to toggle hitbox visualization');
       console.log('[DEBUG] Cheat keys:');
       console.log('  E = +100 energy');
       console.log('  Shift+E = +1000 energy');
@@ -68,6 +71,12 @@ export class NodeDebugger {
     if (input.isKeyPressed('KeyR')) {
       this.debugPositions = [...SHIP_POSITIONS];
       console.log('[DEBUG] Reset to original positions');
+    }
+
+    // Toggle hitbox visualization
+    if (input.isKeyPressed('KeyB')) {
+      this.showHitboxes = !this.showHitboxes;
+      console.log(`[DEBUG] Hitbox visualization: ${this.showHitboxes ? 'ON' : 'OFF'}`);
     }
 
     // Debug cheats
@@ -174,6 +183,11 @@ export class NodeDebugger {
   /** Render debug overlay */
   render(display: IDisplay): void {
     if (!this.enabled) return;
+
+    // Render hitboxes if enabled
+    if (this.showHitboxes) {
+      this.renderHitboxes(display);
+    }
 
     this.renderOriginalPositions(display);
     this.renderDebugPositions(display);
@@ -309,6 +323,7 @@ export class NodeDebugger {
       'M: Max energy',
       'C: +10 power cells (Shift: +50)',
       'G: +10 Scrap (Shift: +100)',
+      'B: Toggle hitbox view',
       'D: Exit debugger'
     ];
 
@@ -318,6 +333,101 @@ export class NodeDebugger {
         font: isHeader ? 'bold 11px monospace' : '11px monospace',
         fill: isHeader ? '#ff00ff' : '#ffffff'
       });
+    });
+  }
+
+  /** Render all UI hitboxes for debugging */
+  private renderHitboxes(display: IDisplay): void {
+    const input = MakkoEngine.input;
+    const mouseX = input.mouseX || 0;
+    const mouseY = input.mouseY || 0;
+
+    // Button bounds from render-ui.ts (imported values would be ideal, but keeping in sync manually for debug)
+    const buttons = [
+      { name: 'DIVE', bounds: { x: 260, y: 821, width: 200, height: 139 }, color: '#00ffff' },
+      { name: 'MISSION', bounds: { x: 1670, y: 20, width: 50, height: 50 }, color: '#ffff00' },
+      { name: 'CREW', bounds: { x: 1730, y: 20, width: 50, height: 50 }, color: '#ff00ff' },
+      { name: 'INVENTORY', bounds: { x: 1790, y: 20, width: 50, height: 50 }, color: '#00ff00' },
+      { name: 'HELP', bounds: { x: 1850, y: 20, width: 50, height: 50 }, color: '#ff8800' }
+    ];
+
+    // Draw each button's clickable area
+    for (const btn of buttons) {
+      const b = btn.bounds;
+      const isHovered = mouseX >= b.x && mouseX <= b.x + b.width && 
+                        mouseY >= b.y && mouseY <= b.y + b.height;
+
+      // Fill
+      display.drawRect(b.x, b.y, b.width, b.height, {
+        fill: btn.color,
+        alpha: isHovered ? 0.4 : 0.15
+      });
+
+      // Border
+      display.drawRect(b.x, b.y, b.width, b.height, {
+        stroke: btn.color,
+        lineWidth: 2,
+        alpha: 1
+      });
+
+      // Label
+      display.drawText(btn.name, b.x + b.width / 2, b.y + b.height / 2, {
+        font: 'bold 12px monospace',
+        fill: btn.color,
+        align: 'center',
+        baseline: 'middle'
+      });
+
+      // Coords
+      display.drawText(`${b.x},${b.y}`, b.x + 2, b.y - 5, {
+        font: '10px monospace',
+        fill: btn.color,
+        alpha: 0.8
+      });
+      display.drawText(`${b.width}x${b.height}`, b.x + b.width - 2, b.y + b.height + 12, {
+        font: '10px monospace',
+        fill: btn.color,
+        align: 'right',
+        alpha: 0.8
+      });
+    }
+
+    // Draw what the visual asset bounds actually are for the Scavenge button
+    const diveBounds = { x: 260, y: 900, width: 200, height: 60 };
+    const assetWidth = 550 * 0.18;  // 99
+    const assetHeight = 548 * 0.18; // ~98.6
+    const propX = diveBounds.x + (diveBounds.width - assetWidth) / 2;  // 310.5
+    const propY = diveBounds.y - assetHeight + 20;  // ~821.4
+
+    // Draw the actual visual asset area
+    display.drawRect(propX, propY, assetWidth, assetHeight, {
+      stroke: '#ff0000',
+      lineWidth: 2,
+      alpha: 0.8
+    });
+
+    display.drawText('VISUAL ASSET', propX + assetWidth / 2, propY - 10, {
+      font: '10px monospace',
+      fill: '#ff0000',
+      align: 'center',
+      alpha: 0.9
+    });
+
+    // Mouse position indicator
+    display.drawCircle(mouseX, mouseY, 8, {
+      stroke: '#ffffff',
+      lineWidth: 2,
+      alpha: 0.8
+    });
+    display.drawLine(mouseX - 15, mouseY, mouseX + 15, mouseY, {
+      stroke: '#ffffff',
+      lineWidth: 1,
+      alpha: 0.5
+    });
+    display.drawLine(mouseX, mouseY - 15, mouseX, mouseY + 15, {
+      stroke: '#ffffff',
+      lineWidth: 1,
+      alpha: 0.5
     });
   }
 

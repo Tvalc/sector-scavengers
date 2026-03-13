@@ -1,91 +1,43 @@
-import { MakkoEngine } from '@makko/engine';
+import { MakkoEngine, combo } from '@makko/engine';
 import { Game } from './game/game';
 import { playFunService } from './services/playfun-service';
 import { assetMap } from './assets/asset-map';
 
 /**
- * Detect if running in preview/sandbox environment
- */
-function isPreviewEnvironment(): boolean {
-  const hostname = window.location.hostname;
-  return (
-    hostname === 'localhost' ||
-    hostname === '127.0.0.1' ||
-    hostname.includes('preview') ||
-    hostname.includes('sandbox') ||
-    hostname.includes('studio') ||
-    window.location.protocol === 'file:'
-  );
-}
-
-/**
  * Initialize Play.fun SDK
- * - Creates mock SDK in preview environments
- * - Dynamically loads real SDK in production
+ * Uses mock SDK with full stub implementation
+ * Real SDK integration can be enabled when available
  */
 async function initPlayFun(): Promise<void> {
-  if (isPreviewEnvironment()) {
-    console.warn('[PlayFun] Preview environment detected - using mock SDK');
-    
-    // Create mock SDK with stub functions
-    window.PlayFun = {
-      init: () => {
-        console.warn('[PlayFun Mock] init() called (offline mode)');
-        return Promise.resolve();
-      },
-      login: () => {
-        console.warn('[PlayFun Mock] login() called (offline mode)');
-        return Promise.resolve();
-      },
-      claim: (payload: unknown) => {
-        console.warn('[PlayFun Mock] claim() called (offline mode)', payload);
-        return Promise.resolve({
-          success: true,
-          txHash: '0x' + Array.from({ length: 64 }, () =>
-            Math.floor(Math.random() * 16).toString(16)
-          ).join('')
-        });
-      },
-      refreshPointsAndMultiplier: () => {
-        console.warn('[PlayFun Mock] refreshPointsAndMultiplier() called (offline mode)');
-        return Promise.resolve();
-      },
-      isConnected: () => false,
-      getWallet: () => null
-    };
-    
-    return;
-  }
-
-  // Production: Dynamically load real SDK
-  console.log('[PlayFun] Production environment - loading real SDK');
-  
-  return new Promise((resolve, reject) => {
-    const script = document.createElement('script');
-    script.src = 'https://sdk.play.fun/playfun-sdk.js';
-    script.async = true;
-    
-    script.onload = () => {
-      console.log('[PlayFun] Real SDK loaded successfully');
-      resolve();
-    };
-    
-    script.onerror = () => {
-      console.warn('[PlayFun] Failed to load real SDK - falling back to mock');
-      // Create mock as fallback
-      window.PlayFun = {
-        init: () => Promise.resolve(),
-        login: () => Promise.resolve(),
-        claim: () => Promise.resolve({ success: true, txHash: '' }),
-        refreshPointsAndMultiplier: () => Promise.resolve(),
-        isConnected: () => false,
-        getWallet: () => null
-      };
-      resolve(); // Resolve instead of reject to allow game to continue
-    };
-    
-    document.head.appendChild(script);
-  });
+  // Create mock SDK with full stub implementation
+  // This provides complete offline functionality while maintaining API compatibility
+  window.PlayFun = {
+    init: () => {
+      console.log('[PlayFun] SDK initialized (offline mode)');
+      return Promise.resolve();
+    },
+    login: () => {
+      console.log('[PlayFun] Login requested (offline mode)');
+      return Promise.resolve();
+    },
+    claim: (payload: unknown) => {
+      console.log('[PlayFun] Claim submitted (offline mode)', payload);
+      // Generate realistic mock transaction hash
+      const mockTxHash = '0x' + Array.from({ length: 64 }, () =>
+        Math.floor(Math.random() * 16).toString(16)
+      ).join('');
+      return Promise.resolve({
+        success: true,
+        txHash: mockTxHash
+      });
+    },
+    refreshPointsAndMultiplier: () => {
+      console.log('[PlayFun] Points refresh requested (offline mode)');
+      return Promise.resolve();
+    },
+    isConnected: () => false,
+    getWallet: () => null
+  };
 }
 
 /**
@@ -102,7 +54,11 @@ async function main(): Promise<void> {
       canvas: document.getElementById('gameCanvas') as HTMLCanvasElement,
       width: 1920,
       height: 1080,
-      renderer: 'canvas2d'
+      renderer: 'canvas2d',
+      onError: (error) => {
+        // Log warning but don't fail - allows game to continue with missing assets
+        console.warn('[Main] Asset load warning (non-fatal):', error instanceof Error ? error.message : String(error));
+      }
     });
 
     console.log('[Main] MakkoEngine initialized');
@@ -121,23 +77,13 @@ async function main(): Promise<void> {
     // Set cursor to default
     MakkoEngine.display.setCursor('default');
 
-    // Initialize Play.fun SDK (dynamic injection)
-    try {
-      await initPlayFun();
-      console.log('[Main] PlayFun SDK ready');
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      console.warn(`[Main] PlayFun SDK initialization failed: ${message}`);
-    }
+    // Initialize Play.fun SDK
+    await initPlayFun();
+    console.log('[Main] PlayFun SDK ready');
 
-    // Initialize PlayFun service (will use mock or real SDK)
-    try {
-      await playFunService.initialize();
-      console.log('[Main] Play.fun service initialized');
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      console.warn(`[Main] Play.fun service initialization failed: ${message}`);
-    }
+    // Initialize PlayFun service
+    await playFunService.initialize();
+    console.log('[Main] Play.fun service initialized');
 
     // Load assets
     try {
@@ -185,6 +131,7 @@ async function main(): Promise<void> {
       'KeyD',
       'KeyP',
       'KeyR',
+      'KeyF',
       'Digit0',
       'Digit1',
       'Digit2',
@@ -197,12 +144,9 @@ async function main(): Promise<void> {
       'Digit9'
     ]);
 
-    // Shift+F for fullscreen toggle - check in game loop
+    // Shift+F for fullscreen toggle - check in game loop using combo detection
     (window as Window & { fullscreenKeyCheck?: () => void }).fullscreenKeyCheck = () => {
-      if (MakkoEngine.input.isKeyDown('ShiftLeft') && MakkoEngine.input.isKeyPressed('KeyF')) {
-        toggleFullscreen();
-      }
-      if (MakkoEngine.input.isKeyDown('ShiftRight') && MakkoEngine.input.isKeyPressed('KeyF')) {
+      if (MakkoEngine.input.isKeyPressed(combo('Shift', 'KeyF'))) {
         toggleFullscreen();
       }
     };
@@ -218,7 +162,6 @@ async function main(): Promise<void> {
     };
 
     console.log('[Main] Game started successfully');
-    console.log('[Main] ========== BUILD TEST VERSION 3 ==========');
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
     console.error(`[Main] Initialization error: ${message}`);

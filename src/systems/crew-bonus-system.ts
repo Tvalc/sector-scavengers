@@ -8,6 +8,7 @@
 import { CryoState } from './cryo-system';
 import { CrewRole } from '../types/crew';
 import { CREW_OPERATION_BONUSES } from '../config/economy-config';
+import type { GameState, DoctrineType } from '../types/state';
 
 /**
  * Check if a specific role is assigned to a ship
@@ -79,8 +80,13 @@ export function getDiscoveryBonus(cryoState: CryoState, shipId: number): number 
  * Get global crew efficiency bonus from medics
  * Returns 0.10 (10%) per medic assigned to any ship
  * This is a global bonus, not per-ship
+ * 
+ * Doctrine effects:
+ * - Corporate: -10% penalty
+ * - Cooperative: +10% bonus
+ * - Smuggler: No modifier
  */
-export function getGlobalCrewEfficiencyBonus(cryoState: CryoState): number {
+export function getGlobalCrewEfficiencyBonus(cryoState: CryoState, gameState?: GameState): number {
   const awakenedCrew = cryoState.pods
     .filter(p => p.crew.awake)
     .map(p => p.crew);
@@ -92,7 +98,20 @@ export function getGlobalCrewEfficiencyBonus(cryoState: CryoState): number {
   ).length;
   
   // Each medic provides 10% bonus
-  return medicCount * CREW_OPERATION_BONUSES[CrewRole.Medic].crewEfficiencyBonus;
+  let bonus = medicCount * CREW_OPERATION_BONUSES[CrewRole.Medic].crewEfficiencyBonus;
+  
+  // Apply doctrine modifiers
+  if (gameState && gameState.meta.doctrine) {
+    const doctrine = gameState.meta.doctrine;
+    
+    if (doctrine === 'corporate') {
+      bonus -= 0.10; // -10% penalty
+    } else if (doctrine === 'cooperative') {
+      bonus += 0.10; // +10% bonus
+    }
+  }
+  
+  return Math.max(0, bonus); // Ensure bonus is never negative
 }
 
 /**

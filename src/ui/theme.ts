@@ -16,6 +16,11 @@ export const COLORS = {
   successGreen: '#00ff88',
   warningYellow: '#ffdd00',
   
+  // Aliases for semantic use
+  warning: '#ffdd00',   // Alias for warningYellow
+  danger: '#ff3344',    // Alias for warningRed
+  success: '#00ff88',   // Alias for successGreen
+  
   // Background colors
   background: '#0a0e1a',
   panelBg: '#141824',
@@ -37,12 +42,22 @@ export const COLORS = {
 /**
  * Card type to color mapping
  * Maps tactic card types to their corresponding accent colors
- * Simplified to three core actions: Scavenge (risk), Repair (persist), Extract (safe)
+ * Core actions: Scavenge (risk), Repair (persist), Extract (safe)
+ * Unlockable: Shield (protection), Upgrade (growth), Analyze (discovery)
  */
 export const CARD_COLORS = {
+  // Core cards
   SCAVENGE: COLORS.warningYellow,  // Risk/reward - caution
   REPAIR: COLORS.successGreen,      // Persistence - positive
   EXTRACT: COLORS.neonCyan,         // Safe exit - neutral/safe
+  // Unlockable cards
+  SHIELD: COLORS.neonCyan,          // Protection - blue/cyan safety
+  UPGRADE: COLORS.neonMagenta,      // Improvement - special/rare
+  ANALYZE: COLORS.successGreen,     // Discovery - positive outcome
+  // New sub-type cards
+  RUSH_SCAVENGE: COLORS.warningRed, // High risk - danger
+  FULL_HAUL: COLORS.neonMagenta,    // Guaranteed loot - special
+  BREAK_ROOM_RAID: COLORS.successGreen, // Free supplies - positive
 } as const;
 
 /**

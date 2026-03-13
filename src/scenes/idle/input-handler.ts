@@ -15,10 +15,13 @@ import {
   INVENTORY_BUTTON_BOUNDS, 
   HELP_BUTTON_BOUNDS,
   INVENTORY_PANEL,
-  CREW_PANEL
+  CREW_PANEL,
+  PARTY_PANEL
 } from './render-ui';
+import { UIRenderer } from './render-ui';
 import { InventorySystem } from '../../systems/inventory-system';
 import { NodeDebugger } from './debug';
+import { PauseMenu, PauseMenuState } from './pause-menu';
 
 /** Result of input processing */
 export interface InputResult {
@@ -32,7 +35,16 @@ export interface InputResult {
   hoveredCellId: number | null;
   /** Ship ID to show management panel for (null if none) */
   showShipManagement: number | null;
+  /** Whether dive was triggered (needs transition) */
+  diveTriggered: boolean;
+  /** Party slot clicked (for selector popup) */
+  partySlotClicked: 'lead' | 'companion0' | 'companion1' | null;
+  /** Party selector selection (authoredId or null for generic) */
+  partySelection: { slotType: 'lead' | 'companion0' | 'companion1'; authoredId: string | null } | null;
 }
+
+/** Pause menu action result type */
+export type PauseMenuAction = 'resume' | 'fullscreen' | 'restart' | 'saveAndExit' | 'returnToTitle' | null;
 
 /** Hovered slot info for tooltip display */
 export interface HoveredSlot {
@@ -53,9 +65,34 @@ export class InputHandler {
   private showMissionModal: boolean = false;
   private selectedShipId: number | null = null;
   private hoveredInventorySlot: HoveredSlot | null = null;
+  private activePartySelector: 'lead' | 'companion0' | 'companion1' | null = null;
+  
+  /** Pause menu state */
+  public pauseMenu: PauseMenu;
 
   constructor(nodeDebugger: NodeDebugger) {
     this.nodeDebugger = nodeDebugger;
+    this.pauseMenu = new PauseMenu();
+  }
+  
+  /** Check if pause menu is showing */
+  isPauseMenuShowing(): boolean {
+    return this.pauseMenu.isShowing();
+  }
+
+  /** Get active party selector */
+  getActivePartySelector(): 'lead' | 'companion0' | 'companion1' | null {
+    return this.activePartySelector;
+  }
+
+  /** Set active party selector */
+  setActivePartySelector(value: 'lead' | 'companion0' | 'companion1' | null): void {
+    this.activePartySelector = value;
+  }
+
+  /** Close party selector */
+  closePartySelector(): void {
+    this.activePartySelector = null;
   }
 
   /** Get current help modal state */
@@ -148,7 +185,10 @@ export class InputHandler {
       toggleHelp: false,
       toggleInventory: false,
       hoveredCellId: null,
-      showShipManagement: null
+      showShipManagement: null,
+      diveTriggered: false,
+      partySlotClicked: null,
+      partySelection: null
     };
 
     const input = MakkoEngine.input;
@@ -166,6 +206,13 @@ export class InputHandler {
       return result;
     }
 
+    // Toggle fullscreen with Shift+F
+    if (input.isKeyPressed('KeyF') && input.isKeyDown('ShiftLeft')) {
+      result.consumed = true;
+      (result as InputResult & { pauseMenuAction?: PauseMenuAction }).pauseMenuAction = 'fullscreen';
+      return result;
+    }
+
     // Toggle help modal
     if (input.isKeyPressed('KeyH') || input.isKeyPressed('Slash')) {
       this.showHowToPlay = !this.showHowToPlay;
@@ -174,8 +221,22 @@ export class InputHandler {
       return result;
     }
 
-    // Close modals on Escape (priority: mission > ship management > cryo > help)
+    // Handle pause menu input if showing
+    if (this.pauseMenu.isShowing()) {
+      const pauseAction = this.handlePauseMenuInput(game);
+      // Pause menu handled the input - store the action for the scene to process
+      (result as InputResult & { pauseMenuAction?: PauseMenuAction }).pauseMenuAction = pauseAction;
+      result.consumed = true;
+      return result;
+    }
+
+    // Close modals on Escape (priority: party selector > mission > ship management > cryo > help > pause menu)
     if (input.isKeyPressed('Escape')) {
+      if (this.activePartySelector) {
+        this.activePartySelector = null;
+        result.consumed = true;
+        return result;
+      }
       if (this.showMissionModal) {
         this.showMissionModal = false;
         result.consumed = true;
@@ -197,10 +258,14 @@ export class InputHandler {
         result.consumed = true;
         return result;
       }
+      // No other modal showing - open pause menu
+      this.pauseMenu.show();
+      result.consumed = true;
+      return result;
     }
 
     // Don't process other input if modal is showing
-    if (this.showHowToPlay || this.showCryoModal || this.showShipManagement || this.showMissionModal) {
+    if (this.showHowToPlay || this.showCryoModal || this.showShipManagement || this.showMissionModal || this.activePartySelector) {
       result.consumed = true;
       return result;
     }
@@ -243,7 +308,10 @@ export class InputHandler {
       toggleHelp: false,
       toggleInventory: false,
       hoveredCellId: null,
-      showShipManagement: null
+      showShipManagement: null,
+      diveTriggered: false,
+      partySlotClicked: null,
+      partySelection: null
     };
 
     const input = MakkoEngine.input;
@@ -251,11 +319,27 @@ export class InputHandler {
     // Reset hovered slot at start
     this.hoveredInventorySlot = null;
 
+    // Handle party selector if active
+    if (this.activePartySelector && inventory) {
+      return this.handlePartySelectorClick(game, mouseX, mouseY);
+    }
+
+    // Check party panel slots first (only if no modal is showing)
+    if (!this.showHowToPlay && !this.showCryoModal && !this.showShipManagement && !this.showMissionModal) {
+      const partySlotClicked = this.checkPartySlotClick(mouseX, mouseY, input.isMousePressed(0));
+      if (partySlotClicked) {
+        result.partySlotClicked = partySlotClicked;
+        result.consumed = true;
+        return result;
+      }
+    }
+
     // Check DIVE button
     if (isPointInBounds(mouseX, mouseY, DIVE_BUTTON_BOUNDS)) {
       MakkoEngine.display.setCursor('pointer');
       if (input.isMousePressed(0)) {
-        this.handleDiveClick(game, hubSystem);
+        // Signal dive triggered - scene handles the actual transition
+        result.diveTriggered = true;
         result.consumed = true;
       }
       return result;
@@ -352,14 +436,66 @@ export class InputHandler {
     return result;
   }
 
-  private handleDiveClick(game: Game, hubSystem: HubSystem): void {
-    const selectedCount = hubSystem.getSelectedCount();
-    
-    if (selectedCount < 1) return;
+  /**
+   * Handle pause menu keyboard navigation and selection
+   */
+  private handlePauseMenuInput(game: Game): PauseMenuAction {
+    const input = MakkoEngine.input;
 
-    const selectedIds = hubSystem.getSelectedCellIds();
-    game.setHubSelectedShips(selectedIds);
-    game.startDepthDive();
+    // Navigate up
+    if (input.isKeyPressed('ArrowUp') || input.isKeyPressed('KeyW')) {
+      this.pauseMenu.navigateUp();
+      return null;
+    }
+
+    // Navigate down
+    if (input.isKeyPressed('ArrowDown') || input.isKeyPressed('KeyS')) {
+      this.pauseMenu.navigateDown();
+      return null;
+    }
+
+    // Select option
+    if (input.isKeyPressed('Enter') || input.isKeyPressed('Space')) {
+      const option = this.pauseMenu.getSelectedOption();
+      
+      switch (option) {
+        case 'Resume':
+          this.pauseMenu.hide();
+          return 'resume';
+          
+        case 'Fullscreen':
+          return 'fullscreen';
+          
+        case 'Restart Game':
+          this.pauseMenu.hide();
+          return 'restart';
+          
+        case 'Save & Exit':
+          return 'saveAndExit';
+          
+        case 'Return to Title':
+          return 'returnToTitle';
+          
+        default:
+          return null;
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Check if dive can be triggered
+   */
+  canDive(hubSystem: HubSystem): boolean {
+    return hubSystem.getSelectedCount() >= 1;
+  }
+
+  /**
+   * Get selected ship IDs for dive
+   */
+  getSelectedShipIds(hubSystem: HubSystem): number[] {
+    return hubSystem.getSelectedCellIds();
   }
 
   /** Check if mouse is hovering over an inventory slot */
@@ -424,5 +560,127 @@ export class InputHandler {
     }
 
     return null;
+  }
+
+  /** Check if mouse is over a party slot */
+  private checkPartySlotClick(
+    mouseX: number,
+    mouseY: number,
+    mousePressed: boolean
+  ): 'lead' | 'companion0' | 'companion1' | null {
+    const panel = PARTY_PANEL;
+    const leadCenterX = panel.x + panel.width / 2;
+
+    // Check lead slot
+    const leadSize = panel.leadSlotSize;
+    const leadX = leadCenterX - leadSize / 2;
+    const leadY = panel.y + panel.leadSlotY;
+
+    if (mouseX >= leadX && mouseX <= leadX + leadSize &&
+        mouseY >= leadY && mouseY <= leadY + leadSize + 20) {
+      MakkoEngine.display.setCursor('pointer');
+      if (mousePressed) {
+        return 'lead';
+      }
+    }
+
+    // Check companion slots
+    const compSize = panel.companionSlotSize;
+    const compSlotY = panel.y + panel.companionSlotY;
+    const compSpacing = 70;
+    const compStartX = leadCenterX - compSpacing - compSize / 2;
+
+    // Companion 0
+    if (mouseX >= compStartX && mouseX <= compStartX + compSize &&
+        mouseY >= compSlotY && mouseY <= compSlotY + compSize + 20) {
+      MakkoEngine.display.setCursor('pointer');
+      if (mousePressed) {
+        return 'companion0';
+      }
+    }
+
+    // Companion 1
+    const comp1X = compStartX + compSpacing + 10;
+    if (mouseX >= comp1X && mouseX <= comp1X + compSize &&
+        mouseY >= compSlotY && mouseY <= compSlotY + compSize + 20) {
+      MakkoEngine.display.setCursor('pointer');
+      if (mousePressed) {
+        return 'companion1';
+      }
+    }
+
+    return null;
+  }
+
+  /** Handle click within party selector dropdown */
+  private handlePartySelectorClick(
+    game: Game,
+    mouseX: number,
+    mouseY: number
+  ): InputResult {
+    const result: InputResult = {
+      consumed: false,
+      toggleHelp: false,
+      toggleInventory: false,
+      hoveredCellId: null,
+      showShipManagement: null,
+      diveTriggered: false,
+      partySlotClicked: null,
+      partySelection: null
+    };
+
+    const input = MakkoEngine.input;
+
+    // Get available recruits and item bounds
+    const awakenedRecruits = game.getAwakenedAuthoredRecruits();
+    const selectedLead = game.getSelectedLead();
+    const companionSlots = game.getCompanionSlots();
+
+    const uiRenderer = new UIRenderer();
+    const items = uiRenderer.getPartySelectorItemBounds(
+      this.activePartySelector!,
+      awakenedRecruits,
+      selectedLead,
+      companionSlots as [string | null, string | null]
+    );
+
+    // Check if click is outside dropdown (close it)
+    const panel = PARTY_PANEL;
+    const dropdownWidth = 200;
+    const dropdownX = panel.x + panel.width + 10;
+    const dropdownY = panel.y + (this.activePartySelector === 'lead' ? panel.leadSlotY : panel.companionSlotY);
+    const itemHeight = 40;
+    const itemCount = items.length;
+    const dropdownHeight = itemCount * itemHeight + 20;
+
+    if (mouseX < dropdownX || mouseX > dropdownX + dropdownWidth ||
+        mouseY < dropdownY || mouseY > dropdownY + dropdownHeight) {
+      // Click outside - close selector
+      if (input.isMousePressed(0)) {
+        this.activePartySelector = null;
+        result.consumed = true;
+        return result;
+      }
+    }
+
+    // Check each item
+    for (const item of items) {
+      if (mouseX >= item.bounds.x && mouseX <= item.bounds.x + item.bounds.width &&
+          mouseY >= item.bounds.y && mouseY <= item.bounds.y + item.bounds.height) {
+        MakkoEngine.display.setCursor('pointer');
+        if (input.isMousePressed(0)) {
+          result.partySelection = {
+            slotType: this.activePartySelector!,
+            authoredId: item.authoredId
+          };
+          this.activePartySelector = null;
+          result.consumed = true;
+          return result;
+        }
+      }
+    }
+
+    result.consumed = true;
+    return result;
   }
 }

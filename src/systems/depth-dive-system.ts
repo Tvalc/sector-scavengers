@@ -146,7 +146,26 @@ export class DepthDiveSystem {
       collectedItems: [],
       targetShipId: null,
       targetRepairedThisRun: false,
-      scrapEarned: 0
+      repairsThisRun: 0,
+      scrapEarned: 0,
+      leadId: null,
+      companionIds: [null, null],
+      abilityUsage: {
+        workingMemoryUsed: false,
+        triageUsed: false,
+        fieldRetrofitUsed: false,
+        signalTraceUsed: false,
+        deadDropUsed: false,
+        ghostCredentialUsed: false
+      },
+      appliedPassiveBonuses: {
+        shieldBonus: 0,
+        repairBonus: 0,
+        discoveryBonus: 0,
+        extractionBonus: 0
+      },
+      bankedRewards: 0,
+      firstHandDealt: false
     };
     this.sessionStability = 100;
     this.selectedShipId = null;

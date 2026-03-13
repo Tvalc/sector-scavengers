@@ -31,8 +31,8 @@ const HOW_TO_PLAY_CONTENT = {
   bullets: [
     'Ships generate Power passively (10/min each)',
     'Spend Power in Salvage Operations to claim ships and extract resources',
-    'Use Tactic Cards: SCAN, REPAIR, BYPASS, UPGRADE, EXTRACT',
-    'Beware Hull Breach (35%) on EXTRACT—use Shields to protect your run!'
+    'Use Tactic Cards: SCAVENGE (risk/reward), REPAIR (persist ship), EXTRACT (safe exit)',
+    'Beware Hull Breach (35%) on SCAVENGE—EXTRACT is the safe way out!'
   ]
 };
 
